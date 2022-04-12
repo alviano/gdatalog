@@ -1,0 +1,138 @@
+import dataclasses
+from typing import Dict, Callable, List, Any, Tuple
+from scipy import stats
+
+import clingo
+import random
+import valid8
+
+from functools import lru_cache
+from fractions import Fraction
+from typeguard import typechecked
+
+from gdatalog import utils
+
+
+@typechecked
+@dataclasses.dataclass(order=True, frozen=True)
+class Probability:
+    value: Fraction = dataclasses.field(default=Fraction(0))
+
+    @staticmethod
+    def validate(n: int, d: int):
+        utils.validate('n', n, min_value=0, max_value=d)
+        utils.validate('d', d, min_value=1)
+
+    @staticmethod
+    def of(n, d):
+        return Probability(Fraction(n, d))
+
+    def __post_init__(self):
+        utils.validate_dataclass(self)
+        self.validate(self.value.numerator, self.value.denominator)
+
+    def __str__(self):
+        return f'{self.value} (~{float(self)})'
+
+    def __float__(self):
+        return float(self.value)
+
+    def __add__(self, other):
+        return Probability(self.value + other.value)
+
+    def complement(self):
+        return Probability(Fraction(1) - self.value)
+
+
+@typechecked
+@dataclasses.dataclass(order=True, frozen=True)
+class DeltaTermCall:
+    function: str
+    params: List
+    signature: List
+    result: Any
+    probability: Probability
+
+    def __post_init__(self):
+        utils.validate_dataclass(self)
+
+
+class DeltaTermsContext:
+    delta_terms = {}
+
+    def __init__(self):
+        self.__calls = []
+
+    @classmethod
+    def register(cls, name, code):
+        cls.delta_terms[name] = code
+
+    @property
+    def calls(self):
+        return self.__calls
+
+    @lru_cache(maxsize=None)
+    def delta(self, function, params, signature):
+        res = self.delta_terms[function.name](*params.arguments)
+        # pars = ','.join(str(x) for x in params.arguments)
+        # sig = str(signature)
+        # if sig[0] == '(':
+        #     sig = sig[1:-1]
+        # print(f'delta-term: {function.name}<{pars}>({sig}) = {res[0]};  probability: {res[1]}')
+        self.__calls.append(
+            DeltaTermCall(
+                function=function.name,
+                params=params.arguments,
+                signature=signature,
+                result=res[0],
+                probability=res[1],
+            )
+        )
+        return res[0]
+
+
+@typechecked
+def flip(bias_n: clingo.Number, bias_d: clingo.Number) -> Tuple[clingo.Number, Probability]:
+    n, d = bias_n.number, bias_d.number
+    Probability.validate(n, d)
+    probability_of_1 = Probability.of(n, d)
+    res = 1 if (random.uniform(0, 1) * d <= n) else 0
+    prob = probability_of_1 if res == 1 else probability_of_1.complement()
+    return clingo.Number(res), prob
+
+
+@typechecked
+def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probability]:
+    a, b = a.number, b.number
+    utils.validate('a', a, min_value=0)
+    utils.validate('b', b, min_value=a)
+    res = random.randint(a, b)
+    prob = Probability.of(1, b - a + 1)
+    return clingo.Number(res), prob
+
+
+@typechecked
+def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: clingo.Number) -> Tuple[clingo.Number, Probability]:
+    n, p_n, p_d = n_classes.number, p_numerator.number, p_denominator.number
+    utils.validate('n_classes', n, min_value=1)
+    Probability.validate(p_n, p_d)
+    res = stats.binom.rvs(n, p_n / p_d)
+    prob = Probability(Fraction.from_float(stats.binom.pmf(res, n, p_n / p_d)))
+    return clingo.Number(res), prob
+
+
+@typechecked
+def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Number, Probability]:
+    n, d = lambda_n.number, lambda_d.number
+    utils.validate('lambda_n', n, min_value=1)
+    utils.validate('lambda_d', d, min_value=1)
+    res = stats.poisson.rvs(n / d)
+    prob = Probability(Fraction.from_float(stats.poisson.pmf(res, n / d)))
+    return clingo.Number(res), prob
+
+
+DeltaTermsContext.register('flip', flip)
+DeltaTermsContext.register('randint', randint)
+DeltaTermsContext.register('binom', binom)
+DeltaTermsContext.register('poisson', poisson)
+
