@@ -220,3 +220,36 @@ reach(Y) :- reach(X), edge(X,Y), healthy(Y).
     # assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
     freq = res.sets_of_stable_models_frequency()
     freq.print()
+
+
+def test_flip_coin_then_derive_a_or_b():
+    program = Program("""
+coin(@delta(flip, (1,2), ())).
+a :- coin(0).
+b :- coin(1).    
+    """)
+    res = program.repeat(1000)
+    freq = res.no_stable_model_frequency()
+    assert freq == Probability()
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 2
+    freq.print()
+    for x in freq.keys():
+        assert len(freq.models(x)) == 1
+
+
+def test_flip_coin_then_kill_or_derive_a_and_b():
+    program = Program("""
+coin(@delta(flip, (1,2), ())).
+:- coin(0).
+a :- coin(1), not b.
+b :- coin(1), not a. 
+    """)
+    res = program.repeat(1000)
+    freq = res.no_stable_model_frequency()
+    assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 2
+    freq.print()
+    for x in freq.keys():
+        assert len(freq.models(x)) in {0, 2}
