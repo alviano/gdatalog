@@ -31,6 +31,74 @@ res(b, @delta(flip, (1,2), (a))).
     assert len(res.delta_terms) == 1
 
 
+def test_flip_conditional():
+    program = Program("""
+res(a, @delta(flip, (1,2), (a))).
+res(b, @delta(flip, (1,2), (b))) :- res(a, 1).
+    """)
+    res = program.repeat(100)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 3
+    # freq.print()
+
+
+def test_flip_conditional_with_negation():
+    program = Program("""
+group1(a).
+group1(b).
+group2(c).
+res1(C, @delta(flip, (1,2), (C))) :- group1(C).
+some1 :- res1(C,1).
+res2(C, @delta(flip, (1,2), (C))) :- group2(C), not some1.
+    """)
+    res = program.repeat(1000)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 5
+    # freq.print()
+
+
+def test_flip_conditional_with_projection():
+    program = Program("""
+group1(a).
+group1(b).
+group2(c).
+res1(C, @delta(flip, (1,2), (C))) :- group1(C).
+res2(C, @delta(flip, (1,2), (C))) :- group2(C), not res1(_,1).
+    """)
+    res = program.repeat(1000)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 5
+    # freq.print()
+
+
+def test_flip_conditional_with_conditional_literal():
+    program = Program("""
+group1(a).
+group1(b).
+group2(c).
+res1(C, @delta(flip, (1,2), (C))) :- group1(C).
+res2(C, @delta(flip, (1,2), (C))) :- group2(C); res1(C',0) : group1(C').
+    """)
+    res = program.repeat(1000)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 5
+    # freq.print()
+
+
+def test_flip_conditional_with_aggregates():
+    program = Program("""
+group1(a).
+group1(b).
+group2(c).
+res1(C, @delta(flip, (1,2), (C))) :- group1(C).
+res2(C, @delta(flip, (1,2), (C))) :- group2(C), #count{C' : res1(C',0)} = 0.
+    """)
+    res = program.repeat(1000)
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 5
+    # freq.print()
+
+
 def test_flip_bias():
     program = Program("""
 result(C, @delta(flip, (1,10), (C))) :- C = 1..1000.
@@ -213,6 +281,31 @@ reach(X) :- healthy(X), not not_first(X).
 reach(Y) :- reach(X), edge(X,Y), healthy(Y).
 
 :- node(X), healthy(X), not reach(X).
+    """, max_stable_models=1)
+    res = program.repeat(1000)
+    freq = res.no_stable_model_frequency()
+    print(freq.complement())
+    # assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
+    freq = res.sets_of_stable_models_frequency()
+    freq.print()
+
+
+def test_program_virus_spread_2():
+    program = Program("""
+connection(a,b).
+connection(a,c).
+connection(b,c).
+connection(Y,X) :- connection(X,Y).
+
+router(X) :- connection(X,_).
+
+infected(a,1).
+
+infected(Y,@delta(flip, (10,100), (X,Y))) :- infected(X,1), connection(X,Y).
+
+healthy(X) :- router(X), not infected(X,1).
+
+:- healthy(X), healthy(Y), connection(X,Y).
     """, max_stable_models=1)
     res = program.repeat(1000)
     freq = res.no_stable_model_frequency()
