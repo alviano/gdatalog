@@ -21,6 +21,14 @@ class SmsResult:
     def __post_init__(self):
         utils.validate_dataclass(self)
 
+    def print(self):
+        if self.state.satisfiable:
+            print('Models:')
+            print(self.models)
+            print('Delta terms:')
+            for term in self.delta_terms:
+                print(term)
+
 
 @typeguard.typechecked
 @dataclasses.dataclass(frozen=True)

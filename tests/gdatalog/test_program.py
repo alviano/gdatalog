@@ -17,6 +17,8 @@ res(a, @delta(flip, (1,2), (a))).
 res(b, @delta(flip, (1,2), (b))).
     """)
     res = program.sms()
+    # print()
+    # res.print()
     assert res.state.satisfiable
     assert len(res.delta_terms) == 2
 
@@ -27,6 +29,8 @@ res(a, @delta(flip, (1,2), (a))).
 res(b, @delta(flip, (1,2), (a))).
     """)
     res = program.sms()
+    # print()
+    # res.print()
     assert res.state.satisfiable
     assert len(res.delta_terms) == 1
 

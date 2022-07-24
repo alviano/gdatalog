@@ -46,13 +46,18 @@ class Probability:
 @dataclasses.dataclass(order=True, frozen=True)
 class DeltaTermCall:
     function: str
-    params: List
-    signature: List
+    params: List[clingo.Symbol]
+    signature: List[clingo.Symbol]
     result: Any
     probability: Probability
 
     def __post_init__(self):
         utils.validate_dataclass(self)
+
+    def __str__(self):
+        params = ','.join([str(p) for p in self.params])
+        signature = ','.join([str(s) for s in self.signature])
+        return f'@{self.function}<{params}>({signature}) = {self.result} [{self.probability}]'
 
 
 class DeltaTermsContext:
@@ -72,16 +77,13 @@ class DeltaTermsContext:
     @lru_cache(maxsize=None)
     def delta(self, function, params, signature):
         res = self.delta_terms[function.name](*params.arguments)
-        # pars = ','.join(str(x) for x in params.arguments)
-        # sig = str(signature)
-        # if sig[0] == '(':
-        #     sig = sig[1:-1]
-        # print(f'delta-term: {function.name}<{pars}>({sig}) = {res[0]};  probability: {res[1]}')
+        # if signature.type != clingo.SymbolType.Function or signature.name != '':
+        #     signature = clingo.Function(name='', arguments=[signature])
         self.__calls.append(
             DeltaTermCall(
                 function=function.name,
                 params=params.arguments,
-                signature=signature,
+                signature=signature.arguments,
                 result=res[0],
                 probability=res[1],
             )
