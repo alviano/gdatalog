@@ -1,8 +1,6 @@
 import dataclasses
 from collections import defaultdict
-from dataclasses import InitVar
-from fractions import Fraction
-from typing import Tuple, List, Dict, Optional
+from typing import List, Dict, Optional
 
 import clingo
 import typeguard
@@ -140,7 +138,8 @@ class RepeatResult:
             if res.models:
                 for model in res.models:
                     model_as_str = str(model)
-                    frequency[model_as_str] += Probability.of(self.counters[key], len(res.models) * self.number_of_calls)
+                    frequency[model_as_str] += Probability.of(self.counters[key],
+                                                              len(res.models) * self.number_of_calls)
                     models[model_as_str] = ModelList.of([model])
             else:
                 frequency['INCOHERENT'] += Probability.of(self.counters[key], self.number_of_calls)

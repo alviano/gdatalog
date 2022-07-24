@@ -10,4 +10,5 @@ conda create --name "$name" python=3.9
 
 conda install --yes --name "$name" pytest
 conda install --yes --name "$name" -c potassco clingo
-conda install --yes --name "$name -c conda-forge typeguard
+conda install --yes --name "$name" -c anaconda scipy
+conda install --yes --name "$name" -c conda-forge typeguard

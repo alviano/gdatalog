@@ -1,11 +1,11 @@
 import dataclasses
 import re
+from typing import Callable, List, Iterable
+
 import clingo
 import typeguard
 import valid8
-
 from dataclass_type_validator import dataclass_type_validator, TypeValidationError
-from typing import Callable, List, Iterable
 from typeguard import typechecked
 
 
@@ -128,5 +128,5 @@ class ModelCollect:
         return iter(self.__value)
 
 
-def do_nothing(*args):
+def do_nothing(*_):
     pass

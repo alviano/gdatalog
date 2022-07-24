@@ -1,13 +1,11 @@
 import dataclasses
-from typing import Dict, Callable, List, Any, Tuple
-from scipy import stats
+import random
+from fractions import Fraction
+from functools import lru_cache
+from typing import List, Any, Tuple
 
 import clingo
-import random
-import valid8
-
-from functools import lru_cache
-from fractions import Fraction
+from scipy import stats
 from typeguard import typechecked
 
 from gdatalog import utils
@@ -112,7 +110,8 @@ def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probabil
 
 
 @typechecked
-def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: clingo.Number) -> Tuple[clingo.Number, Probability]:
+def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: clingo.Number) -> \
+        Tuple[clingo.Number, Probability]:
     n, p_n, p_d = n_classes.number, p_numerator.number, p_denominator.number
     utils.validate('n_classes', n, min_value=1)
     Probability.validate(p_n, p_d)
