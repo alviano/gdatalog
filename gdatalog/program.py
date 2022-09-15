@@ -1,5 +1,6 @@
 import dataclasses
 from collections import defaultdict
+from dataclasses import InitVar
 from typing import List, Dict, Optional
 
 import clingo
@@ -28,48 +29,6 @@ class SmsResult:
             print('Delta terms:')
             for term in self.delta_terms:
                 print(term)
-
-
-@typeguard.typechecked
-@dataclasses.dataclass(frozen=True)
-class Program:
-    code: str
-    max_stable_models: int = dataclasses.field(default=0)
-    __delta_terms_to_sms_result: Dict[str, SmsResult] = dataclasses.field(default_factory=dict)
-
-    def __post_init__(self):
-        utils.validate_dataclass(self)
-
-    def sms(self, delta_terms_key: Optional[str] = None) -> SmsResult:
-        if delta_terms_key is not None:
-            return self.__delta_terms_to_sms_result[delta_terms_key]
-
-        context = DeltaTermsContext()
-        model_collect = utils.ModelCollect()
-
-        control = clingo.Control()
-        control.configuration.solve.models = self.max_stable_models
-        control.add("base", [], self.code)
-        control.ground([("base", [])], context=context)
-
-        delta_terms = str(context.calls)
-        if delta_terms not in self.__delta_terms_to_sms_result:
-            res = control.solve(on_model=model_collect)
-            self.__delta_terms_to_sms_result[delta_terms] = SmsResult(
-                state=res,
-                models=ModelList.of(x for x in model_collect),
-                delta_terms=context.calls,
-                delta_terms_key=delta_terms,
-            )
-        return self.__delta_terms_to_sms_result[delta_terms]
-
-    def repeat(self, times: int) -> 'RepeatResult':
-        utils.validate('times', times, min_value=1)
-        counters = defaultdict(lambda: 0)
-        for _ in range(times):
-            res = self.sms()
-            counters[res.delta_terms_key] += 1
-        return RepeatResult(self, times, counters)
 
 
 @typeguard.typechecked
@@ -112,13 +71,60 @@ class SetsOfStableModelsFrequency:
 
 @typeguard.typechecked
 @dataclasses.dataclass(frozen=True)
-class RepeatResult:
-    program: Program
-    number_of_calls: int
-    counters: Dict[str, int]
+class Program:
+    code: str
+    max_stable_models: int = dataclasses.field(default=0)
+    __delta_terms_to_sms_result: Dict[str, SmsResult] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self):
         utils.validate_dataclass(self)
+
+    def sms(self, delta_terms_key: Optional[str] = None) -> SmsResult:
+        if delta_terms_key is not None:
+            return self.__delta_terms_to_sms_result[delta_terms_key]
+
+        context = DeltaTermsContext()
+        model_collect = utils.ModelCollect()
+
+        control = clingo.Control()
+        control.configuration.solve.models = self.max_stable_models
+        control.add("base", [], self.code)
+        control.ground([("base", [])], context=context)
+
+        delta_terms = str(context.calls)
+        if delta_terms not in self.__delta_terms_to_sms_result:
+            res = control.solve(on_model=model_collect)
+            self.__delta_terms_to_sms_result[delta_terms] = SmsResult(
+                state=res,
+                models=ModelList.of(x for x in model_collect),
+                delta_terms=context.calls,
+                delta_terms_key=delta_terms,
+            )
+        return self.__delta_terms_to_sms_result[delta_terms]
+
+
+@typeguard.typechecked
+@dataclasses.dataclass(frozen=True)
+class Repeat:
+    program: Program
+    number_of_calls: int
+    counters: Dict[str, int]
+    key: InitVar[object]
+
+    __key = object()
+
+    def __post_init__(self, key):
+        utils.validate_dataclass(self)
+        utils.validate('key', key, equals=self.__key, help_msg="Must be created by Repeat::on()")
+
+    @classmethod
+    def on(cls, program: Program, times: int) -> 'Repeat':
+        utils.validate('times', times, min_value=1)
+        counters = defaultdict(lambda: 0)
+        for _ in range(times):
+            res = program.sms()
+            counters[res.delta_terms_key] += 1
+        return Repeat(program=program, number_of_calls=times, counters=counters, key=cls.__key)
 
     def no_stable_model_frequency(self):
         freq = Probability()

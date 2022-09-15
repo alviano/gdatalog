@@ -1,7 +1,7 @@
 import pytest
 
 from gdatalog.delta_terms import Probability
-from gdatalog.program import Program
+from gdatalog.program import Program, Repeat
 
 
 def test_flip_single_coin():
@@ -40,7 +40,7 @@ def test_flip_conditional():
 res(a, @delta(flip, (1,2), (a))).
 res(b, @delta(flip, (1,2), (b))) :- res(a, 1).
     """)
-    res = program.repeat(100)
+    res = Repeat.on(program, 100)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 3
     # freq.print()
@@ -55,7 +55,7 @@ res1(C, @delta(flip, (1,2), (C))) :- group1(C).
 some1 :- res1(C,1).
 res2(C, @delta(flip, (1,2), (C))) :- group2(C), not some1.
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 5
     # freq.print()
@@ -69,7 +69,7 @@ group2(c).
 res1(C, @delta(flip, (1,2), (C))) :- group1(C).
 res2(C, @delta(flip, (1,2), (C))) :- group2(C), not res1(_,1).
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 5
     # freq.print()
@@ -83,7 +83,7 @@ group2(c).
 res1(C, @delta(flip, (1,2), (C))) :- group1(C).
 res2(C, @delta(flip, (1,2), (C))) :- group2(C); res1(C',0) : group1(C').
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 5
     # freq.print()
@@ -97,7 +97,7 @@ group2(c).
 res1(C, @delta(flip, (1,2), (C))) :- group1(C).
 res2(C, @delta(flip, (1,2), (C))) :- group2(C), #count{C' : res1(C',0)} = 0.
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 5
     # freq.print()
@@ -105,7 +105,7 @@ res2(C, @delta(flip, (1,2), (C))) :- group2(C), #count{C' : res1(C',0)} = 0.
 
 def test_flip_bias():
     program = Program("""
-result(C, @delta(flip, (1,10), (C))) :- C = 1..1000.
+result(C, @delta(flip, (1,10), (C,))) :- C = 1..1000.
 
 #show.
 #show (F,S) : F = 0..1, S = #count{C : result(C,F)}.
@@ -123,7 +123,7 @@ def test_repeat_flip_coin():
     program = Program("""
 #show X : X = @delta(flip, (9,10), ()).    
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     for key in res.counters:
         assert len(program.sms(key).models) == 1
         assert len(program.sms(key).models[0]) == 1
@@ -148,7 +148,7 @@ f(a, @delta(flip, (1,2), (a))) :- c, f(c, 1).
 
 :- f(a, 1), f(b, 0).    
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 6
     # freq.print()
@@ -160,9 +160,9 @@ f(a, @delta(flip, (1,2), (a))) :- c, f(c, 1).
 
 def test_program_with_randint():
     program = Program("""
-    res(@delta(randint, (1, 10), ())).    
+res(@delta(randint, (1, 10), ())).
         """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 10
     # freq.print()
@@ -172,7 +172,7 @@ def test_program_with_binom():
     program = Program("""
 res(@delta(binom, (5, 4,10), ())).    
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     assert len(freq) == 6
     # freq.print()
@@ -182,7 +182,7 @@ def test_program_with_poisson():
     program = Program("""
 res(@delta(poisson, (6,10), ())).    
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     freq = [x for x in freq.values() if float(x[0]) >= 0.05]
     assert len(freq) == 3
@@ -211,7 +211,7 @@ assign(X,blue) :- node(X), not assign(X,red), not assign(X,green).
  
 :- edge(X,Y), not removed(X,Y,1), assign(X,C), assign(Y,C).
     """, max_stable_models=1)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.no_stable_model_frequency()
     # print(freq.complement())
     assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
@@ -253,7 +253,7 @@ reach(Y) :- reach(X), next(X,I), neighbor(X,I,Y).
 
 :- node(X), not reach(X).
     """, max_stable_models=1)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     # freq = res.sets_of_stable_models_frequency()
     # freq.print()
     freq = res.no_stable_model_frequency()
@@ -286,7 +286,7 @@ reach(Y) :- reach(X), edge(X,Y), healthy(Y).
 
 :- node(X), healthy(X), not reach(X).
     """, max_stable_models=1)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.no_stable_model_frequency()
     print(freq.complement())
     # assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
@@ -300,7 +300,7 @@ coin(@delta(flip, (1,2), ())).
 a :- coin(0).
 b :- coin(1).    
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.no_stable_model_frequency()
     assert freq == Probability()
     freq = res.sets_of_stable_models_frequency()
@@ -317,7 +317,7 @@ coin(@delta(flip, (1,2), ())).
 a :- coin(1), not b.
 b :- coin(1), not a. 
     """)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.no_stable_model_frequency()
     assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)
     freq = res.sets_of_stable_models_frequency()
@@ -344,7 +344,7 @@ healthy(X) :- router(X), not infected(X,1).
 
 :- healthy(X), healthy(Y), connection(X,Y).
     """, max_stable_models=1)
-    res = program.repeat(1000)
+    res = Repeat.on(program, 1000)
     freq = res.no_stable_model_frequency()
     print(freq.complement())
     # assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
