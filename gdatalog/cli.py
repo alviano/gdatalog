@@ -123,6 +123,10 @@ def command_repeat(
                 table.add_row()
                 continue
             for model_index, model in enumerate(models, start=1):
+                if len(model) == 0:
+                    table.add_row(f"{probability}", f"{model_index}/{len(models)}")
+                    table.add_row()
+                    continue
                 for atom_index, atom in enumerate(sorted(model, key=lambda m: str(m)), start=1):
                     table.add_row(
                         f"{probability}" if model_index == atom_index == 1 else "",
@@ -140,10 +144,11 @@ def command_repeat(
         grid.add_row(table)
         return grid
 
+    to_be_done = number_of_times
     with Live(console=console) as live:
-        n = min(number_of_times, update_frequency)
+        n = min(to_be_done, update_frequency)
         res = Repeat.on(app_options.program, n)
-        to_be_done = number_of_times - n
+        to_be_done -= n
         live.update(stats_table(res))
 
         while to_be_done > 0:
