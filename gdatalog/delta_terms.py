@@ -80,8 +80,8 @@ class DeltaTermsContext:
     @lru_cache(maxsize=None)
     def delta(self, function, params, signature):
         res = self.delta_terms[function.name](*params.arguments)
-        # if signature.type != clingo.SymbolType.Function or signature.name != '':
-        #     signature = clingo.Function(name='', arguments=[signature])
+        if signature.type != clingo.SymbolType.Function or signature.name != '':
+            signature = clingo.Function(name='', arguments=[signature])
         self.__calls.append(
             DeltaTermCall(
                 function=function.name,
