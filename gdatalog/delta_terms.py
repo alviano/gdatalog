@@ -139,4 +139,3 @@ DeltaTermsContext.register('flip', flip)
 DeltaTermsContext.register('randint', randint)
 DeltaTermsContext.register('binom', binom)
 DeltaTermsContext.register('poisson', poisson)
-

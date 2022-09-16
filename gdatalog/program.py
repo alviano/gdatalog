@@ -91,7 +91,7 @@ class Program:
         control.add("base", [], self.code)
         control.ground([("base", [])], context=context)
 
-        delta_terms = str(context.calls)
+        delta_terms = str(sorted(context.calls))
         if delta_terms not in self.__delta_terms_to_sms_result:
             res = control.solve(on_model=model_collect)
             self.__delta_terms_to_sms_result[delta_terms] = SmsResult(
