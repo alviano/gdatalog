@@ -38,6 +38,9 @@ class Probability:
     def __add__(self, other):
         return Probability(self.value + other.value)
 
+    def __mul__(self, other):
+        return Probability(self.value * other.value)
+
     def complement(self):
         return Probability(Fraction(1) - self.value)
 

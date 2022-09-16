@@ -1,12 +1,15 @@
 import dataclasses
+from functools import reduce
 from pathlib import Path
 from typing import List
 
-import typer as typer
+import typer
 from rich.panel import Panel
+from rich.progress import track
 from rich.table import Table
 
 from gdatalog import utils
+from gdatalog.delta_terms import Probability
 from gdatalog.program import Program, Repeat
 from gdatalog.utils import console
 
@@ -43,7 +46,12 @@ def main(
             "-f",
             help="One or more files to parse",
         ),
-        number_of_models: int = typer.Option(0, help="Maximum number of stable models to compute (0 for unbounded)"),
+        number_of_models: int = typer.Option(
+            0,
+            "--number-of-models",
+            "-n",
+            help="Maximum number of stable models to compute (0 for unbounded)"
+        ),
         debug: bool = typer.Option(False, "--debug", help="Don't minimize browser"),
 ):
     """
@@ -76,7 +84,12 @@ def command_run() -> None:
     with console.status("Running..."):
         res = app_options.program.sms()
 
-    console.print(Panel('\n'.join(str(term) for term in res.delta_terms), title="Delta Terms", title_align="left"))
+    probability = reduce(lambda p, d: p * d.probability, res.delta_terms, Probability.of(1, 1))
+    console.print(Panel(
+        '\n'.join(str(term) for term in res.delta_terms),
+        title=f"Delta Terms - probability of this outcome {probability}",
+        title_align="left",
+    ))
     if res.state.satisfiable:
         for index, model in enumerate(res.models, start=1):
             console.print(Panel('\n'.join(str(atom) for atom in model), title=f"Model {index} of {len(res.models)}",
@@ -93,26 +106,38 @@ def command_repeat(
     Run the program multiple times and print stats (frequency analysis).
     """
     utils.validate('number_of_times', number_of_times, min_value=1)
-    with console.status(f'Repeating {number_of_times} times...'):
-        res = Repeat.on(app_options.program, number_of_times)
 
-    freq = res.sets_of_stable_models_frequency()
+    def print_table(res: Repeat):
+        freq = res.sets_of_stable_models_frequency()
 
-    table = Table(title=f"Stats on {number_of_times} runs")
-    table.add_column("Probability", justify="right")
-    table.add_column("Model #", justify="center")
-    table.add_column("Model")
-    for (probability, models) in sorted(freq.values(), key=lambda x: x[0], reverse=True):
-        if len(models) == 0:
-            table.add_row(f"{probability}", "0")
-            table.add_row()
-            continue
-        for model_index, model in enumerate(models, start=1):
-            for atom_index, atom in enumerate(sorted(model, key=lambda m: str(m)), start=1):
-                table.add_row(
-                    f"{probability}" if model_index == atom_index == 1 else "",
-                    f"{model_index}/{len(models)}" if atom_index == 1 else "",
-                    f"{atom}",
-                )
-            table.add_row()
-    console.print(table)
+        table = Table(title=f"Stats on {res.number_of_calls} runs")
+        table.add_column("Probability", justify="right")
+        table.add_column("Model #", justify="center")
+        table.add_column("Model")
+        for (probability, models) in sorted(freq.values(), key=lambda x: x[0], reverse=True):
+            if len(models) == 0:
+                table.add_row(f"{probability}", "0")
+                table.add_row()
+                continue
+            for model_index, model in enumerate(models, start=1):
+                for atom_index, atom in enumerate(sorted(model, key=lambda m: str(m)), start=1):
+                    table.add_row(
+                        f"{probability}" if model_index == atom_index == 1 else "",
+                        f"{model_index}/{len(models)}" if atom_index == 1 else "",
+                        f"{atom}",
+                    )
+                table.add_row()
+        console.print(table)
+
+    # with console.status(f'Repeating {number_of_times} times...'):
+    #     res = Repeat.on(app_options.program, number_of_times)
+
+    res = Repeat.on(app_options.program, 1)
+    print_table(res)
+    for _ in track(range(number_of_times - 1)):
+        res.repeat(1)
+        print_table(res)
+
+
+
+

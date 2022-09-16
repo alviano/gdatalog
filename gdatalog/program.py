@@ -104,7 +104,7 @@ class Program:
 
 
 @typeguard.typechecked
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass()
 class Repeat:
     program: Program
     number_of_calls: int
@@ -125,6 +125,13 @@ class Repeat:
             res = program.sms()
             counters[res.delta_terms_key] += 1
         return Repeat(program=program, number_of_calls=times, counters=counters, key=cls.__key)
+
+    def repeat(self, times: int):
+        utils.validate('times', times, min_value=1)
+        self.number_of_calls += times
+        for _ in range(times):
+            res = self.program.sms()
+            self.counters[res.delta_terms_key] += 1
 
     def no_stable_model_frequency(self):
         freq = Probability()
