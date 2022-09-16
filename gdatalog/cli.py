@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import List
 
 import typer
+from rich.live import Live
 from rich.panel import Panel
-from rich.progress import track
+from rich.progress import Progress
 from rich.table import Table
 
 from gdatalog import utils
@@ -100,17 +101,19 @@ def command_run() -> None:
 
 @app.command(name="repeat")
 def command_repeat(
-        number_of_times: int = typer.Option(100, "--number-of-times", "-n", help="Number of runs"),
+        number_of_times: int = typer.Option(1000, "--number-of-times", "-n", help="Number of runs"),
+        update_frequency: int = typer.Option(100, "--update-frequency", "-u", help="Update table every N runs"),
 ) -> None:
     """
     Run the program multiple times and print stats (frequency analysis).
     """
     utils.validate('number_of_times', number_of_times, min_value=1)
+    utils.validate('update_frequency', update_frequency, min_value=1)
 
-    def print_table(res: Repeat):
-        freq = res.sets_of_stable_models_frequency()
+    def stats_table(repeat_result: Repeat):
+        freq = repeat_result.sets_of_stable_models_frequency()
 
-        table = Table(title=f"Stats on {res.number_of_calls} runs")
+        table = Table(title=f"Stats on {repeat_result.number_of_calls} runs")
         table.add_column("Probability", justify="right")
         table.add_column("Model #", justify="center")
         table.add_column("Model")
@@ -127,17 +130,27 @@ def command_repeat(
                         f"{atom}",
                     )
                 table.add_row()
-        console.print(table)
 
-    # with console.status(f'Repeating {number_of_times} times...'):
-    #     res = Repeat.on(app_options.program, number_of_times)
+        progress = Progress(console=console)
+        progress.add_task("Repeating...", completed=res.number_of_calls, total=number_of_times)
 
-    res = Repeat.on(app_options.program, 1)
-    print_table(res)
-    for _ in track(range(number_of_times - 1)):
-        res.repeat(1)
-        print_table(res)
+        grid = Table.grid()
+        if res.number_of_calls < number_of_times:
+            grid.add_row(progress)
+        grid.add_row(table)
+        return grid
 
+    with Live(console=console) as live:
+        n = min(number_of_times, update_frequency)
+        res = Repeat.on(app_options.program, n)
+        to_be_done = number_of_times - n
+        live.update(stats_table(res))
+
+        while to_be_done > 0:
+            n = min(to_be_done, update_frequency)
+            res.repeat(n)
+            to_be_done -= n
+            live.update(stats_table(res))
 
 
 
