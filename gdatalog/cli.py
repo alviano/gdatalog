@@ -69,7 +69,7 @@ def main(
     for filename in filenames:
         with open(filename) as f:
             lines += f.readlines()
-    program = Program('\n'.join(lines))
+    program = Program('\n'.join(lines), max_stable_models=number_of_models)
 
     app_options = AppOptions(
         program=program,
@@ -124,7 +124,10 @@ def command_repeat(
                 continue
             for model_index, model in enumerate(models, start=1):
                 if len(model) == 0:
-                    table.add_row(f"{probability}", f"{model_index}/{len(models)}")
+                    table.add_row(
+                        f"{probability}" if model_index == 1 else "",
+                        f"{model_index}/{len(models)}"
+                    )
                     table.add_row()
                     continue
                 for atom_index, atom in enumerate(sorted(model, key=lambda m: str(m)), start=1):
