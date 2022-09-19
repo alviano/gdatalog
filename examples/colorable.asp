@@ -2,7 +2,7 @@ color(red). color(green). color(blue).
 
 % complete graph K4
 node(1..4).
-edge(X,Y) :- node(X), node(Y), X != Y.
+edge(X,Y) :- node(X), node(Y), X < Y.
 
 removed(X,Y,@delta(flip, (5,100), (X,Y))) :- edge(X,Y).
 
