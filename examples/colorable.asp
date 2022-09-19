@@ -1,13 +1,8 @@
 color(red). color(green). color(blue).
-edge(a,b).
-edge(a,c).
-edge(a,d).
-edge(b,c).
-edge(b,d).
-edge(c,d).
 
-node(X) :- edge(X,_).
-node(Y) :- edge(_,Y).
+% complete graph K4
+node(1..4).
+edge(X,Y) :- node(X), node(Y), X != Y.
 
 removed(X,Y,@delta(flip, (5,100), (X,Y))) :- edge(X,Y).
 
