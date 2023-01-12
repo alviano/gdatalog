@@ -1,22 +1,24 @@
 import clingo
 import pytest
 
+from dumbo_asp.utils import ValidationError
+
 from gdatalog import utils
 from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson
 
 
 def test_flip_bias_cannot_be_less_than_zero():
-    with pytest.raises(utils.ValidationError):
+    with pytest.raises(ValidationError):
         flip(clingo.Number(-1), clingo.Number(10))
 
 
 def test_flip_bias_cannot_be_greater_than_one():
-    with pytest.raises(utils.ValidationError):
+    with pytest.raises(ValidationError):
         flip(clingo.Number(3), clingo.Number(2))
 
 
 def test_flip_bias_must_be_a_number():
-    with pytest.raises(utils.ValidationError):
+    with pytest.raises(ValidationError):
         flip(clingo.Number(1), clingo.Number(0))
 
 

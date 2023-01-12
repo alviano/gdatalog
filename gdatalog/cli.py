@@ -1,18 +1,18 @@
 import dataclasses
+import typer
+
 from functools import reduce
 from pathlib import Path
 from typing import List
 
-import typer
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 from rich.table import Table
+from dumbo_asp.utils import console, validate
 
-from gdatalog import utils
 from gdatalog.delta_terms import Probability
 from gdatalog.program import Program, Repeat
-from gdatalog.utils import console
 
 
 @dataclasses.dataclass(frozen=True)
@@ -56,13 +56,13 @@ def main(
         debug: bool = typer.Option(False, "--debug", help="Don't minimize browser"),
 ):
     """
-    Esse3 command line utility, to save my future time!
+    Generative Datalog with negation under stable model semantics.
     """
     global app_options
 
-    utils.validate('number_of_models', number_of_models, min_value=0)
+    validate('number_of_models', number_of_models, min_value=0)
     for filename in filenames:
-        utils.validate('filenames', filename.exists() and filename.is_file(), equals=True,
+        validate('filenames', filename.exists() and filename.is_file(), equals=True,
                        help_msg=f"File {filename} does not exists")
 
     lines = []
@@ -107,8 +107,8 @@ def command_repeat(
     """
     Run the program multiple times and print stats (frequency analysis).
     """
-    utils.validate('number_of_times', number_of_times, min_value=1)
-    utils.validate('update_frequency', update_frequency, min_value=1)
+    validate('number_of_times', number_of_times, min_value=1)
+    validate('update_frequency', update_frequency, min_value=1)
 
     def stats_table(repeat_result: Repeat):
         freq = repeat_result.sets_of_stable_models_frequency()

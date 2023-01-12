@@ -2,6 +2,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import InitVar
 from typing import List, Dict, Optional
+from dumbo_asp.utils import validate
 
 import clingo
 import typeguard
@@ -19,9 +20,6 @@ class SmsResult:
     delta_terms: List[DeltaTermCall]
     delta_terms_key: str
 
-    def __post_init__(self):
-        utils.validate_dataclass(self)
-
     def print(self):
         if self.state.satisfiable:
             print('Models:')
@@ -38,8 +36,7 @@ class SetsOfStableModelsFrequency:
     __models: Dict[str, ModelList]
 
     def __post_init__(self):
-        utils.validate_dataclass(self)
-        utils.validate('same_keys', self.__frequency.keys(), equals=self.__models.keys())
+        validate('same_keys', self.__frequency.keys(), equals=self.__models.keys())
 
     def __getitem__(self, item):
         return self.__frequency[item], self.__models[item]
@@ -76,9 +73,6 @@ class Program:
     max_stable_models: int = dataclasses.field(default=0)
     __delta_terms_to_sms_result: Dict[str, SmsResult] = dataclasses.field(default_factory=dict)
 
-    def __post_init__(self):
-        utils.validate_dataclass(self)
-
     def sms(self, delta_terms_key: Optional[str] = None) -> SmsResult:
         if delta_terms_key is not None:
             return self.__delta_terms_to_sms_result[delta_terms_key]
@@ -114,12 +108,11 @@ class Repeat:
     __key = object()
 
     def __post_init__(self, key):
-        utils.validate_dataclass(self)
-        utils.validate('key', key, equals=self.__key, help_msg="Must be created by Repeat::on()")
+        validate('key', key, equals=self.__key, help_msg="Must be created by Repeat::on()")
 
     @classmethod
     def on(cls, program: Program, times: int) -> 'Repeat':
-        utils.validate('times', times, min_value=1)
+        validate('times', times, min_value=1)
         counters = defaultdict(lambda: 0)
         for _ in range(times):
             res = program.sms()
@@ -127,7 +120,7 @@ class Repeat:
         return Repeat(program=program, number_of_calls=times, counters=counters, key=cls.__key)
 
     def repeat(self, times: int):
-        utils.validate('times', times, min_value=1)
+        validate('times', times, min_value=1)
         self.number_of_calls += times
         for _ in range(times):
             res = self.program.sms()

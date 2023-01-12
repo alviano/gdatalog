@@ -127,7 +127,7 @@ def test_repeat_flip_coin():
     for key in res.counters:
         assert len(program.sms(key).models) == 1
         assert len(program.sms(key).models[0]) == 1
-        face = program.sms(key).models[0][0].number
+        face = program.sms(key).models[0][0]
         if face == 1:
             assert res.counters[key] / 1000 == pytest.approx(9 / 10, rel=2)
 

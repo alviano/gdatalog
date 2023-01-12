@@ -3,12 +3,11 @@ import random
 from fractions import Fraction
 from functools import lru_cache
 from typing import List, Any, Tuple
+from dumbo_asp.utils import validate
 
 import clingo
 from scipy import stats
 from typeguard import typechecked
-
-from gdatalog import utils
 
 
 @typechecked
@@ -18,15 +17,14 @@ class Probability:
 
     @staticmethod
     def validate(n: int, d: int):
-        utils.validate('n', n, min_value=0, max_value=d)
-        utils.validate('d', d, min_value=1)
+        validate('n', n, min_value=0, max_value=d)
+        validate('d', d, min_value=1)
 
     @staticmethod
     def of(n, d):
         return Probability(Fraction(n, d))
 
     def __post_init__(self):
-        utils.validate_dataclass(self)
         self.validate(self.value.numerator, self.value.denominator)
 
     def __str__(self):
@@ -53,9 +51,6 @@ class DeltaTermCall:
     signature: List[clingo.Symbol]
     result: Any
     probability: Probability
-
-    def __post_init__(self):
-        utils.validate_dataclass(self)
 
     def __str__(self):
         params = ','.join([str(p) for p in self.params])
@@ -107,8 +102,8 @@ def flip(bias_n: clingo.Number, bias_d: clingo.Number) -> Tuple[clingo.Number, P
 @typechecked
 def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probability]:
     a, b = a.number, b.number
-    utils.validate('a', a, min_value=0)
-    utils.validate('b', b, min_value=a)
+    validate('a', a, min_value=0)
+    validate('b', b, min_value=a)
     res = random.randint(a, b)
     prob = Probability.of(1, b - a + 1)
     return clingo.Number(res), prob
@@ -118,7 +113,7 @@ def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probabil
 def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: clingo.Number) -> \
         Tuple[clingo.Number, Probability]:
     n, p_n, p_d = n_classes.number, p_numerator.number, p_denominator.number
-    utils.validate('n_classes', n, min_value=1)
+    validate('n_classes', n, min_value=1)
     Probability.validate(p_n, p_d)
     res = stats.binom.rvs(n, p_n / p_d)
     prob = Probability(Fraction.from_float(stats.binom.pmf(res, n, p_n / p_d)))
@@ -128,8 +123,8 @@ def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: c
 @typechecked
 def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Number, Probability]:
     n, d = lambda_n.number, lambda_d.number
-    utils.validate('lambda_n', n, min_value=1)
-    utils.validate('lambda_d', d, min_value=1)
+    validate('lambda_n', n, min_value=1)
+    validate('lambda_d', d, min_value=1)
     res = stats.poisson.rvs(n / d)
     prob = Probability(Fraction.from_float(stats.poisson.pmf(res, n / d)))
     return clingo.Number(res), prob
