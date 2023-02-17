@@ -2,7 +2,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import InitVar
 from typing import List, Dict, Optional
-from dumbo_asp.utils import validate
+from dumbo_utils.validation import validate
 
 import clingo
 import typeguard

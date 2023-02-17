@@ -3,7 +3,7 @@ import random
 from fractions import Fraction
 from functools import lru_cache
 from typing import List, Any, Tuple
-from dumbo_asp.utils import validate
+from dumbo_utils.validation import validate
 
 import clingo
 from scipy import stats

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gdatalog"
-version = "0.0.1"
+version = "0.0.2"
 description = "Genereative Datalog with stable negation"
 authors = ["Mario Alviano <mario.alviano@gmail.com>"]
 
@@ -12,7 +12,8 @@ typeguard = "^2.13.3"
 valid8 = "^5.1.2"
 #scipy = "^1.10.0"  # scipy is not compatible with python3.10; temporary fix: $ pip install scipy
 pytest = "^7.2.0"
-dumbo-asp = "^0.0.7"
+dumbo-asp = "^0.0.21"
+distlib = "^0.3.6"
 
 [tool.poetry.dev-dependencies]
 coverage = "^7.0.4"

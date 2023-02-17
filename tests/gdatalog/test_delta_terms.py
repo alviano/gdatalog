@@ -1,7 +1,7 @@
 import clingo
 import pytest
 
-from dumbo_asp.utils import ValidationError
+from dumbo_utils.validation import ValidationError
 
 from gdatalog import utils
 from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson
