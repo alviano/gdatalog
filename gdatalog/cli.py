@@ -9,7 +9,8 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 from rich.table import Table
-from dumbo_asp.utils import console, validate
+from dumbo_utils.console import console
+from dumbo_utils.validation import validate
 
 from gdatalog.delta_terms import Probability
 from gdatalog.program import Program, Repeat
