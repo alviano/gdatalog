@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 .idea/
-.out-of-git/
+out-of-git/
