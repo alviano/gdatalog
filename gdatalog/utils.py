@@ -26,7 +26,7 @@ class ModelList:
         self.__value.sort()
 
     def __str__(self):
-        return '-' if self.empty() else '\n'.join(str(x) for x in self.__value)
+        return '-' if self.is_emtpy() else '\n'.join(str(x) for x in self.__value)
 
     def __len__(self):
         return len(self.__value)
