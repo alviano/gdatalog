@@ -1,7 +1,7 @@
 import pytest
 
 from gdatalog.delta_terms import Probability
-from gdatalog.program import Program, Repeat
+from gdatalog.program import Program, Repeat, SmallRepeat
 
 
 def test_flip_single_coin():
@@ -125,9 +125,9 @@ def test_repeat_flip_coin():
     """)
     res = Repeat.on(program, 1000)
     for key in res.counters:
-        assert len(program.sms(key).models) == 1
-        assert len(program.sms(key).models[0]) == 1
-        face = program.sms(key).models[0][0]
+        assert len(program.sms(delta_terms=key).models) == 1
+        assert len(program.sms(delta_terms=key).models[0]) == 1
+        face = program.sms(delta_terms=key).models[0][0]
         if face == 1:
             assert res.counters[key] / 1000 == pytest.approx(9 / 10, rel=2)
 
@@ -357,8 +357,8 @@ def test_program_with_small_delta():
 res(@delta(small, (1,1,2), ())).
 :- res(2).
     """, max_stable_models=1)
-    res = Repeat.on(program, 1000)
-    freq = res.no_stable_model_frequency()
-    assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)
+    res = SmallRepeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     freq.print()
+    freq = res.no_stable_model_frequency()
+    assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)

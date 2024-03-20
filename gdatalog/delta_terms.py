@@ -3,7 +3,7 @@ import random
 from bisect import bisect_right
 from fractions import Fraction
 from functools import lru_cache
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Iterable, Optional
 from dumbo_utils.validation import validate
 
 import clingo
@@ -48,10 +48,11 @@ class Probability:
 @dataclasses.dataclass(order=True, frozen=True)
 class DeltaTermCall:
     function: str
-    params: List[clingo.Symbol]
-    signature: List[clingo.Symbol]
+    params: tuple[clingo.Symbol, ...]
+    signature: tuple[clingo.Symbol, ...]
     result: Any
     probability: Probability
+    all_done: bool = dataclasses.field(default=False, compare=False, hash=False)
 
     def __str__(self):
         params = ','.join([str(p) for p in self.params])
@@ -60,34 +61,43 @@ class DeltaTermCall:
 
 
 class DeltaTermsContext:
-    delta_terms = {}
+    __delta_terms = {}
 
-    def __init__(self):
+    def __init__(self, calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[int]]] = None):
         self.__calls = []
+        self.calls_prefixes = calls_prefixes or {}  # shared object
 
     @classmethod
     def register(cls, name, code):
-        cls.delta_terms[name] = code
+        cls.__delta_terms[name] = code
 
     @property
-    def calls(self):
-        return self.__calls
+    def calls(self) -> tuple[DeltaTermCall, ...]:
+        return tuple(self.__calls)
 
     @lru_cache(maxsize=None)
     def delta(self, function, params, signature):
-        res = self.delta_terms[function.name](*params.arguments)
         if signature.type != clingo.SymbolType.Function or signature.name != '':
             signature = clingo.Function(name='', arguments=[signature])
+        if function.name == 'small':
+            result, probability, all_done = small(
+                *params.arguments,
+                disallow_list=self.calls_prefixes[self.calls] if self.calls in self.calls_prefixes else ()
+            )
+        else:
+            result, probability = self.__delta_terms[function.name](*params.arguments)
+            all_done = False
         self.__calls.append(
             DeltaTermCall(
                 function=function.name,
-                params=params.arguments,
-                signature=signature.arguments,
-                result=res[0],
-                probability=res[1],
+                params=tuple(params.arguments),
+                signature=tuple(signature.arguments),
+                result=result,
+                probability=probability,
+                all_done=all_done,
             )
         )
-        return res[0]
+        return result
 
 
 @typechecked
@@ -103,7 +113,7 @@ def flip(bias_n: clingo.Number, bias_d: clingo.Number) -> Tuple[clingo.Number, P
 @typechecked
 def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probability]:
     a, b = a.number, b.number
-    validate('a', a, min_value=0)
+    validate('a', a)
     validate('b', b, min_value=a)
     res = random.randint(a, b)
     prob = Probability.of(1, b - a + 1)
@@ -132,17 +142,19 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
 
 
 @typechecked
-def small(*args: clingo.Number) -> Tuple[clingo.Number, Probability]:
+def small(*args: clingo.Number, disallow_list: Iterable[int] = ()) -> Tuple[clingo.Number, Probability, bool]:
     bias = [arg.number for arg in args]
+    allowed_list = []
     cumulative_bias = [0]
     for index, b in enumerate(bias):
-        cumulative_bias.append(cumulative_bias[index] + b)
+        if index not in disallow_list:
+            allowed_list.append(index)
+            cumulative_bias.append(cumulative_bias[-1] + b)
     sum_bias = cumulative_bias[-1]
     rand = random.randint(0, sum_bias - 1)
     res = bisect_right(cumulative_bias, rand, 0, len(cumulative_bias)) - 1
-    probability = [Probability.of(b, sum_bias) for b in bias]
-    prob = probability[res]
-    return clingo.Number(res), prob
+    res = allowed_list[res]
+    return clingo.Number(res), Probability.of(bias[res], sum(bias)), len(allowed_list) == 1
 
 
 DeltaTermsContext.register('flip', flip)

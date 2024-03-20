@@ -13,7 +13,7 @@ from dumbo_utils.console import console
 from dumbo_utils.validation import validate
 
 from gdatalog.delta_terms import Probability
-from gdatalog.program import Program, Repeat
+from gdatalog.program import Program, Repeat, SmallRepeat
 
 
 @dataclasses.dataclass(frozen=True)
@@ -104,6 +104,10 @@ def command_run() -> None:
 def command_repeat(
         number_of_times: int = typer.Option(1000, "--number-of-times", "-n", help="Number of runs"),
         update_frequency: int = typer.Option(100, "--update-frequency", "-u", help="Update table every N runs"),
+        small_enumeration: bool = typer.Option(
+            False, "--small-enumeration", "-s",
+            help="Activate small delta enumeration (unpredictable behavior in case of non-small delta-terms)"
+        )
 ) -> None:
     """
     Run the program multiple times and print stats (frequency analysis).
@@ -151,7 +155,8 @@ def command_repeat(
     to_be_done = number_of_times
     with Live(console=console) as live:
         n = min(to_be_done, update_frequency)
-        res = Repeat.on(app_options.program, n)
+        repeat_class = SmallRepeat if small_enumeration else Repeat
+        res = repeat_class.on(app_options.program, n)
         to_be_done -= n
         live.update(stats_table(res))
 

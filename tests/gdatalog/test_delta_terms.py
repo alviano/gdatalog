@@ -64,4 +64,4 @@ def test_poisson():
 
 def test_small():
     res = small(clingo.Number(1), clingo.Number(1))
-    assert res[0].number in [1, 2]
+    assert res[0].number in [0, 1]
