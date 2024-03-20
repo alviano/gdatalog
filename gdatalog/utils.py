@@ -2,7 +2,7 @@ import dataclasses
 from typing import List, Iterable
 
 import typeguard
-from dumbo_asp.primitives import Model
+from dumbo_asp.primitives.models import Model
 
 
 def on_model_print(m):
