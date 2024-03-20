@@ -4,7 +4,7 @@ import pytest
 from dumbo_utils.validation import ValidationError
 
 from gdatalog import utils
-from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson
+from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, small
 
 
 def test_flip_bias_cannot_be_less_than_zero():
@@ -60,3 +60,8 @@ def test_poisson():
             assert float(res[1]) == pytest.approx(expected[res[0].number])
         else:
             assert float(res[1]) <= 0.02
+
+
+def test_small():
+    res = small(clingo.Number(1), clingo.Number(1))
+    assert res[0].number in [1, 2]

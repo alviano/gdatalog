@@ -350,3 +350,15 @@ healthy(X) :- router(X), not infected(X,1).
     # assert Probability.of(2, 10) <= freq.complement() <= Probability.of(3, 10)
     freq = res.sets_of_stable_models_frequency()
     freq.print()
+
+
+def test_program_with_small_delta():
+    program = Program("""
+res(@delta(small, (1,1,2), ())).
+:- res(2).
+    """, max_stable_models=1)
+    res = Repeat.on(program, 1000)
+    freq = res.no_stable_model_frequency()
+    assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)
+    freq = res.sets_of_stable_models_frequency()
+    freq.print()

@@ -1,5 +1,6 @@
 import dataclasses
 import random
+from bisect import bisect_right
 from fractions import Fraction
 from functools import lru_cache
 from typing import List, Any, Tuple
@@ -130,7 +131,22 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
     return clingo.Number(res), prob
 
 
+@typechecked
+def small(*args: clingo.Number) -> Tuple[clingo.Number, Probability]:
+    bias = [arg.number for arg in args]
+    cumulative_bias = [0]
+    for index, b in enumerate(bias):
+        cumulative_bias.append(cumulative_bias[index] + b)
+    sum_bias = cumulative_bias[-1]
+    rand = random.randint(0, sum_bias - 1)
+    res = bisect_right(cumulative_bias, rand, 0, len(cumulative_bias)) - 1
+    probability = [Probability.of(b, sum_bias) for b in bias]
+    prob = probability[res]
+    return clingo.Number(res), prob
+
+
 DeltaTermsContext.register('flip', flip)
 DeltaTermsContext.register('randint', randint)
 DeltaTermsContext.register('binom', binom)
 DeltaTermsContext.register('poisson', poisson)
+DeltaTermsContext.register('small', small)
