@@ -115,7 +115,7 @@ def command_repeat(
     validate('number_of_times', number_of_times, min_value=1)
     validate('update_frequency', update_frequency, min_value=1)
 
-    def stats_table(repeat_result: Repeat):
+    def stats_table(repeat_result: Repeat | SmallRepeat):
         freq = repeat_result.sets_of_stable_models_frequency()
 
         table = Table(title=f"Stats on {repeat_result.number_of_calls} runs")
@@ -154,16 +154,18 @@ def command_repeat(
 
     to_be_done = number_of_times
     with Live(console=console) as live:
-        n = min(to_be_done, update_frequency)
         repeat_class = SmallRepeat if small_enumeration else Repeat
-        res = repeat_class.on(app_options.program, n)
-        to_be_done -= n
+        res = repeat_class.on(app_options.program)
         live.update(stats_table(res))
 
         while to_be_done > 0:
             n = min(to_be_done, update_frequency)
-            res.repeat(n)
-            to_be_done -= n
+            early_stop = res.repeat(n)
+            if early_stop:
+                to_be_done = 0
+                number_of_times = res.number_of_calls
+            else:
+                to_be_done -= n
             live.update(stats_table(res))
 
 

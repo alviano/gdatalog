@@ -111,10 +111,11 @@ class Repeat:
         validate('key', key, equals=self.__key, help_msg="Must be created by Repeat::on()")
 
     @classmethod
-    def on(cls, program: Program, times: int) -> 'Repeat':
-        validate('times', times, min_value=1)
+    def on(cls, program: Program, times: Optional[int] = None) -> 'Repeat':
         res = Repeat(program=program, number_of_calls=0, counters=defaultdict(lambda: 0), key=cls.__key)
-        res.repeat(times)
+        if times is not None:
+            validate('times', times, min_value=1)
+            res.repeat(times)
         return res
 
     def repeat(self, times: int):
@@ -174,19 +175,20 @@ class SmallRepeat:
         validate('key', key, equals=self.__key, help_msg="Must be created by Repeat::on()")
 
     @classmethod
-    def on(cls, program: Program, times: int) -> 'SmallRepeat':
-        validate('times', times, min_value=1)
+    def on(cls, program: Program, times: Optional[int] = None) -> 'SmallRepeat':
         res = SmallRepeat(program=program, number_of_calls=0, counters=defaultdict(lambda: 0), key=cls.__key)
-        res.repeat(times)
+        if times is not None:
+            validate('times', times, min_value=1)
+            res.repeat(times)
         return res
 
-    def repeat(self, times: int):
+    def repeat(self, times: int) -> bool:
         validate('times', times, min_value=1)
         self.number_of_calls += times
         for index in range(times):
             res = self.program.sms(calls_prefixes=self.__calls_prefixes)
             self.counters[res.delta_terms] += 1
-            assert self.counters[res.delta_terms] == 1
+            assert self.counters[res.delta_terms] == 1  # we cannot encounter the same ground program twice
             if res.delta_terms and res.delta_terms[-1].function == 'small':
                 last = len(res.delta_terms)
                 while last > 0 and res.delta_terms[last - 1].all_done:
@@ -194,11 +196,12 @@ class SmallRepeat:
                 if last == 0:
                     self.number_of_calls -= times
                     self.number_of_calls += index + 1
-                    break
+                    return True
                 key = res.delta_terms[:last - 1]
                 if key not in self.__calls_prefixes:
                     self.__calls_prefixes[key] = set()
                 self.__calls_prefixes[key].add(res.delta_terms[last - 1].result.number)
+        return True
 
     def no_stable_model_frequency(self):
         freq = Probability()

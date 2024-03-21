@@ -143,7 +143,10 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
 
 @typechecked
 def small(*args: clingo.Number, disallow_list: Iterable[int] = ()) -> Tuple[clingo.Number, Probability, bool]:
+    validate("small params", args, min_len=1, help_msg="Sample space cannot be empty")
     bias = [arg.number for arg in args]
+    validate("small params", all(b > 0 for b in bias), equals=True,
+             help_msg="Parameters of small delta-terms must be positive")
     allowed_list = []
     cumulative_bias = [0]
     for index, b in enumerate(bias):
