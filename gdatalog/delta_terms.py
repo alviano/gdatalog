@@ -1,6 +1,7 @@
 import dataclasses
 import random
 from bisect import bisect_right
+from collections import OrderedDict
 from fractions import Fraction
 from functools import lru_cache
 from typing import List, Any, Tuple, Iterable, Optional
@@ -63,7 +64,7 @@ class DeltaTermCall:
 class DeltaTermsContext:
     __delta_terms = {}
 
-    def __init__(self, calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[int]]] = None):
+    def __init__(self, calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[clingo.Symbol]]] = None):
         self.__calls = []
         self.calls_prefixes = calls_prefixes or {}  # shared object
 
@@ -141,23 +142,51 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
     return clingo.Number(res), prob
 
 
-@typechecked
-def small(*args: clingo.Number, disallow_list: Iterable[int] = ()) -> Tuple[clingo.Number, Probability, bool]:
+@lru_cache(maxsize=None)
+def __validate_small(*args: clingo.Number):
     validate("small params", args, min_len=1, help_msg="Sample space cannot be empty")
-    bias = [arg.number for arg in args]
-    validate("small params", all(b > 0 for b in bias), equals=True,
-             help_msg="Parameters of small delta-terms must be positive")
+    outcome_to_bias = OrderedDict()
+    for index, arg in enumerate(args):
+        help_msg = f"Parameter {index} must be a bias, a pair (outcome, bias), or a function outcome(bias)"
+        validate("small params", arg.type, is_in=[clingo.SymbolType.Number, clingo.SymbolType.Function],
+                 help_msg=help_msg)
+        if arg.type == clingo.SymbolType.Number:
+            the_outcome = clingo.Number(index)
+            the_bias = arg
+        elif arg.name == "":
+            validate("small params", arg.arguments, length=2, help_msg=help_msg)
+            the_outcome = arg.arguments[0]
+            the_bias = arg.arguments[1]
+        else:
+            validate("small params", arg.arguments, length=1, help_msg=help_msg)
+            the_outcome = clingo.Function(arg.name, [])
+            the_bias = arg.arguments[0]
+
+        validate("small params", the_bias.type, equals=clingo.SymbolType.Number, help_msg=help_msg)
+        validate("small params", the_bias.number, min_value=1,
+                 help_msg=f"Bias of parameter {index} must be positive (not {the_bias.number})")
+        if the_outcome not in outcome_to_bias:
+            outcome_to_bias[the_outcome] = 0
+        outcome_to_bias[the_outcome] += the_bias.number
+    return outcome_to_bias, sum(outcome_to_bias.values())
+
+
+@typechecked
+def small(*args: clingo.Number, disallow_list: Iterable[clingo.Symbol] = ()) -> Tuple[clingo.Number, Probability, bool]:
+    outcome_to_bias, sum_of_all_bias = __validate_small(*args)
+    outcome_to_bias_items = tuple(outcome_to_bias.items())
     allowed_list = []
     cumulative_bias = [0]
-    for index, b in enumerate(bias):
-        if index not in disallow_list:
+    for index, (outcome, bias) in enumerate(outcome_to_bias_items):
+        if outcome not in disallow_list:
             allowed_list.append(index)
-            cumulative_bias.append(cumulative_bias[-1] + b)
+            cumulative_bias.append(cumulative_bias[-1] + bias)
     sum_bias = cumulative_bias[-1]
     rand = random.randint(0, sum_bias - 1)
     res = bisect_right(cumulative_bias, rand, 0, len(cumulative_bias)) - 1
     res = allowed_list[res]
-    return clingo.Number(res), Probability.of(bias[res], sum(bias)), len(allowed_list) == 1
+    outcome, bias = outcome_to_bias_items[res]
+    return outcome, Probability.of(bias, sum_of_all_bias), len(allowed_list) == 1
 
 
 DeltaTermsContext.register('flip', flip)

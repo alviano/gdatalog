@@ -65,3 +65,15 @@ def test_poisson():
 def test_small():
     res = small(clingo.Number(1), clingo.Number(1))
     assert res[0].number in [0, 1]
+
+
+def test_small_with_names_as_pairs():
+    res = small(clingo.Function("", [clingo.Function("heads"), clingo.Number(1)]),
+                clingo.Function("", [clingo.String("tails"), clingo.Number(1)]))
+    assert str(res[0]) in ["heads", '"tails"']
+
+
+def test_small_with_names_as_functions():
+    res = small(clingo.Function("heads", [clingo.Number(1)]),
+                clingo.Function("tails", [clingo.Number(1)]))
+    assert str(res[0]) in ["heads", "tails"]

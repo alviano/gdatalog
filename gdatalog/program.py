@@ -74,7 +74,7 @@ class Program:
     __delta_terms_to_sms_result: Dict[tuple[DeltaTermCall, ...], SmsResult] = dataclasses.field(default_factory=dict)
 
     def sms(self, *, delta_terms: Optional[tuple[DeltaTermCall, ...]] = None,
-            calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[int]]] = None) -> SmsResult:
+            calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[clingo.Symbol]]] = None) -> SmsResult:
         if delta_terms is not None:
             return self.__delta_terms_to_sms_result[delta_terms]
 
@@ -167,7 +167,8 @@ class SmallRepeat:
     number_of_calls: int
     counters: Dict[tuple[DeltaTermCall, ...], int]
     key: InitVar[object]
-    __calls_prefixes: Dict[tuple[DeltaTermCall, ...], set[int]] = dataclasses.field(default_factory=dict, init=False)
+    __calls_prefixes: Dict[tuple[DeltaTermCall, ...], set[clingo.Symbol]] = dataclasses.field(
+        default_factory=dict, init=False)
 
     __key = object()
 
@@ -200,7 +201,7 @@ class SmallRepeat:
                 key = res.delta_terms[:last - 1]
                 if key not in self.__calls_prefixes:
                     self.__calls_prefixes[key] = set()
-                self.__calls_prefixes[key].add(res.delta_terms[last - 1].result.number)
+                self.__calls_prefixes[key].add(res.delta_terms[last - 1].result)
         return True
 
     def no_stable_model_frequency(self):
