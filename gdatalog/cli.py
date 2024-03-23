@@ -165,6 +165,3 @@ def command_repeat(
             else:
                 to_be_done -= n
             live.update(stats_table(res))
-
-
-

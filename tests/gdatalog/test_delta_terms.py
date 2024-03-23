@@ -4,7 +4,7 @@ import pytest
 from dumbo_utils.validation import ValidationError
 
 from gdatalog import utils
-from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, mass
+from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, mass_with_smart_enumeration
 
 
 def test_flip_bias_cannot_be_less_than_zero():
@@ -63,17 +63,17 @@ def test_poisson():
 
 
 def test_mass():
-    res = mass(clingo.Number(1), clingo.Number(1))
+    res = mass_with_smart_enumeration(clingo.Number(1), clingo.Number(1))
     assert res[0].number in [0, 1]
 
 
 def test_mass_with_names_as_pairs():
-    res = mass(clingo.Function("", [clingo.Function("heads"), clingo.Number(1)]),
-               clingo.Function("", [clingo.String("tails"), clingo.Number(1)]))
+    res = mass_with_smart_enumeration(clingo.Function("", [clingo.Function("heads"), clingo.Number(1)]),
+                                      clingo.Function("", [clingo.String("tails"), clingo.Number(1)]))
     assert str(res[0]) in ["heads", '"tails"']
 
 
 def test_mass_with_names_as_functions():
-    res = mass(clingo.Function("heads", [clingo.Number(1)]),
-               clingo.Function("tails", [clingo.Number(1)]))
+    res = mass_with_smart_enumeration(clingo.Function("heads", [clingo.Number(1)]),
+                                      clingo.Function("tails", [clingo.Number(1)]))
     assert str(res[0]) in ["heads", "tails"]

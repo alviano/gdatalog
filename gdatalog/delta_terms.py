@@ -53,7 +53,7 @@ class DeltaTermCall:
     signature: tuple[clingo.Symbol, ...]
     result: Any
     probability: Probability
-    all_done: bool = dataclasses.field(default=False, compare=False, hash=False)
+    smart_enumeration_exhausted: bool = dataclasses.field(default=False, compare=False, hash=False)
 
     def __str__(self):
         params = ','.join([str(p) for p in self.params])
@@ -83,9 +83,9 @@ class DeltaTermsContext:
         signature = clingo.Function(name='', arguments=signature)
         if function.name:
             result, probability = self.__delta_terms[function.name](*function.arguments)
-            all_done = False
+            smart_enumeration_exhausted = False
         else:
-            result, probability, all_done = mass(
+            result, probability, smart_enumeration_exhausted = mass_with_smart_enumeration(
                 *function.arguments,
                 disallow_list=self.calls_prefixes[self.calls] if self.calls in self.calls_prefixes else ()
             )
@@ -96,7 +96,7 @@ class DeltaTermsContext:
                 signature=tuple(signature.arguments),
                 result=result,
                 probability=probability,
-                all_done=all_done,
+                smart_enumeration_exhausted=smart_enumeration_exhausted,
             )
         )
         return result
@@ -144,27 +144,27 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
 
 
 @lru_cache(maxsize=None)
-def __validate_mass(*args: clingo.Number):
-    validate("mass params", args, min_len=1, help_msg="Sample space cannot be empty")
+def __validate_mass_with_smart_enumeration(*args: clingo.Number):
+    validate("params", args, min_len=1, help_msg="Sample space cannot be empty")
     outcome_to_bias = OrderedDict()
     for index, arg in enumerate(args):
         help_msg = f"Parameter {index} must be a bias, a pair (outcome, bias), or a function outcome(bias)"
-        validate("mass params", arg.type, is_in=[clingo.SymbolType.Number, clingo.SymbolType.Function],
+        validate("params", arg.type, is_in=[clingo.SymbolType.Number, clingo.SymbolType.Function],
                  help_msg=help_msg)
         if arg.type == clingo.SymbolType.Number:
             the_outcome = clingo.Number(index)
             the_bias = arg
         elif arg.name == "":
-            validate("mass params", arg.arguments, length=2, help_msg=help_msg)
+            validate("params", arg.arguments, length=2, help_msg=help_msg)
             the_outcome = arg.arguments[0]
             the_bias = arg.arguments[1]
         else:
-            validate("mass params", arg.arguments, length=1, help_msg=help_msg)
+            validate("params", arg.arguments, length=1, help_msg=help_msg)
             the_outcome = clingo.Function(arg.name, [])
             the_bias = arg.arguments[0]
 
-        validate("mass params", the_bias.type, equals=clingo.SymbolType.Number, help_msg=help_msg)
-        validate("mass params", the_bias.number, min_value=1,
+        validate("params", the_bias.type, equals=clingo.SymbolType.Number, help_msg=help_msg)
+        validate("params", the_bias.number, min_value=1,
                  help_msg=f"Bias of parameter {index} must be positive (not {the_bias.number})")
         if the_outcome not in outcome_to_bias:
             outcome_to_bias[the_outcome] = 0
@@ -173,8 +173,11 @@ def __validate_mass(*args: clingo.Number):
 
 
 @typechecked
-def mass(*args: clingo.Number, disallow_list: Iterable[clingo.Symbol] = ()) -> Tuple[clingo.Number, Probability, bool]:
-    outcome_to_bias, sum_of_all_bias = __validate_mass(*args)
+def mass_with_smart_enumeration(
+        *args: clingo.Number,
+        disallow_list: Iterable[clingo.Symbol] = ()
+) -> Tuple[clingo.Number, Probability, bool]:
+    outcome_to_bias, sum_of_all_bias = __validate_mass_with_smart_enumeration(*args)
     outcome_to_bias_items = tuple(outcome_to_bias.items())
     allowed_list = []
     cumulative_bias = [0]

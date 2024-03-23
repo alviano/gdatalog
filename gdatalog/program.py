@@ -187,7 +187,7 @@ class SmartRepeat(Repeat):
             assert self._counters[res.delta_terms] == 1  # we cannot encounter the same ground program twice
             if res.delta_terms:
                 last = len(res.delta_terms)
-                while last > 0 and res.delta_terms[last - 1].all_done:
+                while last > 0 and res.delta_terms[last - 1].smart_enumeration_exhausted:
                     last -= 1
                 if last == 0:
                     return True
