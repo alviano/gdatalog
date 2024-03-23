@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gdatalog"
-version = "0.2.2"
+version = "0.3.0"
 description = "Genereative Datalog with stable negation"
 authors = ["Mario Alviano <mario.alviano@gmail.com>"]
 

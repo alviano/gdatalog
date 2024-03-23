@@ -6,7 +6,7 @@
 
 day(1..7).
 
-meteors(D, @delta(poisson, (5,1), (D))) :- day(D).
+meteors(D, @delta(poisson(5,1), D)) :- day(D).
 dad_was_right_today(D) :- meteors(D,3).
 
 #show.

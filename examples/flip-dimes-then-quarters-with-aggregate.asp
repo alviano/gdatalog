@@ -4,9 +4,9 @@
 dime(1..2).
 quarter(5).
 
-dime_head(C, @delta(flip, (1,2), (C))) :- dime(C).
+dime_head(C, @delta(flip(1,2), C)) :- dime(C).
 even_dime_heads :- H = #count{C : dime_head(C,1)}, H \ 2 == 0.
-quarter_head(C, @delta(flip, (1,2), (C))) :- quarter(C), even_dime_heads.
+quarter_head(C, @delta(flip(1,2), C)) :- quarter(C), even_dime_heads.
 
 #show.
 #show dime_head(C) : dime_head(C,1).

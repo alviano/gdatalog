@@ -1,19 +1,18 @@
 import dataclasses
-import typer
-
 from functools import reduce
 from pathlib import Path
 from typing import List
 
+import typer
+from dumbo_utils.console import console
+from dumbo_utils.validation import validate
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress
 from rich.table import Table
-from dumbo_utils.console import console
-from dumbo_utils.validation import validate
 
 from gdatalog.delta_terms import Probability
-from gdatalog.program import Program, Repeat, SmallRepeat
+from gdatalog.program import Program, Repeat
 
 
 @dataclasses.dataclass(frozen=True)
@@ -104,9 +103,9 @@ def command_run() -> None:
 def command_repeat(
         number_of_times: int = typer.Option(1000, "--number-of-times", "-n", help="Number of runs"),
         update_frequency: int = typer.Option(100, "--update-frequency", "-u", help="Update table every N runs"),
-        small_enumeration: bool = typer.Option(
-            False, "--small-enumeration", "-s",
-            help="Activate small delta enumeration (unpredictable behavior in case of non-small delta-terms)"
+        smart_enumeration: bool = typer.Option(
+            False, "--smart-enumeration", "-s",
+            help="Activate smart enumeration (incompatible with named delta terms)"
         )
 ) -> None:
     """
@@ -115,7 +114,7 @@ def command_repeat(
     validate('number_of_times', number_of_times, min_value=1)
     validate('update_frequency', update_frequency, min_value=1)
 
-    def stats_table(repeat_result: Repeat | SmallRepeat):
+    def stats_table(repeat_result: Repeat):
         freq = repeat_result.sets_of_stable_models_frequency()
 
         table = Table(title=f"Stats on {repeat_result.number_of_calls} runs")
@@ -154,8 +153,7 @@ def command_repeat(
 
     to_be_done = number_of_times
     with Live(console=console) as live:
-        repeat_class = SmallRepeat if small_enumeration else Repeat
-        res = repeat_class.on(app_options.program)
+        res = Repeat.on(app_options.program, smart=smart_enumeration)
         live.update(stats_table(res))
 
         while to_be_done > 0:

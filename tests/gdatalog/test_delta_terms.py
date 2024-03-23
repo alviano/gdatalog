@@ -4,7 +4,7 @@ import pytest
 from dumbo_utils.validation import ValidationError
 
 from gdatalog import utils
-from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, small
+from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, mass
 
 
 def test_flip_bias_cannot_be_less_than_zero():
@@ -26,7 +26,7 @@ def test_flip_single_coin():
     ctl = clingo.Control()
     ctl.configuration.solve.models = 0
     ctl.add("base", [], """
-res(@delta(flip, (1,2), (a))).
+res(@delta(flip(1,2), a)).
     """)
     ctl.ground([("base", [])], context=DeltaTermsContext())
     model_count = utils.ModelCount()
@@ -62,18 +62,18 @@ def test_poisson():
             assert float(res[1]) <= 0.02
 
 
-def test_small():
-    res = small(clingo.Number(1), clingo.Number(1))
+def test_mass():
+    res = mass(clingo.Number(1), clingo.Number(1))
     assert res[0].number in [0, 1]
 
 
-def test_small_with_names_as_pairs():
-    res = small(clingo.Function("", [clingo.Function("heads"), clingo.Number(1)]),
-                clingo.Function("", [clingo.String("tails"), clingo.Number(1)]))
+def test_mass_with_names_as_pairs():
+    res = mass(clingo.Function("", [clingo.Function("heads"), clingo.Number(1)]),
+               clingo.Function("", [clingo.String("tails"), clingo.Number(1)]))
     assert str(res[0]) in ["heads", '"tails"']
 
 
-def test_small_with_names_as_functions():
-    res = small(clingo.Function("heads", [clingo.Number(1)]),
-                clingo.Function("tails", [clingo.Number(1)]))
+def test_mass_with_names_as_functions():
+    res = mass(clingo.Function("heads", [clingo.Number(1)]),
+               clingo.Function("tails", [clingo.Number(1)]))
     assert str(res[0]) in ["heads", "tails"]

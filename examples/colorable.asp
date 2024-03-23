@@ -4,7 +4,7 @@ color(red). color(green). color(blue).
 node(1..4).
 edge(X,Y) :- node(X), node(Y), X < Y.
 
-removed(X,Y,@delta(flip, (5,100), (X,Y))) :- edge(X,Y).
+removed(X,Y,@delta(flip(5,100), X,Y)) :- edge(X,Y).
 
 {assign(X,C) : color(C)} = 1 :- node(X).
 

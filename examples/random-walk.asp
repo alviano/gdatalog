@@ -24,7 +24,7 @@ to(d).
 node(X) :- neighbors(X,_).
 
 reach(X) :- from(X).
-next(X,@delta(randint, (1,N), (X))) :- reach(X), not to(X), neighbors(X,N).
+next(X,@delta(randint(1,N), X)) :- reach(X), not to(X), neighbors(X,N).
 reach(Y) :- reach(X), next(X,I), neighbor(X,I,Y).
 
 :- node(X), not reach(X).

@@ -1,11 +1,11 @@
 import pytest
 
 from gdatalog.delta_terms import Probability
-from gdatalog.program import Program, Repeat, SmallRepeat
+from gdatalog.program import Program, Repeat, SmartRepeat
 
 
 def test_flip_single_coin():
-    program = Program("res(@delta(flip, (1,2), ())).")
+    program = Program("res(@delta(flip(1,2))).")
     res = program.sms()
     assert res.state.satisfiable
     assert len(res.delta_terms) == 1
@@ -13,8 +13,8 @@ def test_flip_single_coin():
 
 def test_flip_two_coins():
     program = Program("""
-res(a, @delta(flip, (1,2), (a))).
-res(b, @delta(flip, (1,2), (b))).
+res(a, @delta(flip(1,2), a)).
+res(b, @delta(flip(1,2), b)).
     """)
     res = program.sms()
     # print()
@@ -25,8 +25,8 @@ res(b, @delta(flip, (1,2), (b))).
 
 def test_same_flip_in_multiple_lines():
     program = Program("""
-res(a, @delta(flip, (1,2), (a))).
-res(b, @delta(flip, (1,2), (a))).
+res(a, @delta(flip(1,2), a)).
+res(b, @delta(flip(1,2), a)).
     """)
     res = program.sms()
     # print()
@@ -37,8 +37,8 @@ res(b, @delta(flip, (1,2), (a))).
 
 def test_flip_conditional():
     program = Program("""
-res(a, @delta(flip, (1,2), (a))).
-res(b, @delta(flip, (1,2), (b))) :- res(a, 1).
+res(a, @delta(flip(1,2), a)).
+res(b, @delta(flip(1,2), b)) :- res(a, 1).
     """)
     res = Repeat.on(program, 100)
     freq = res.sets_of_stable_models_frequency()
@@ -51,9 +51,9 @@ def test_flip_conditional_with_negation():
 group1(a).
 group1(b).
 group2(c).
-res1(C, @delta(flip, (1,2), (C))) :- group1(C).
+res1(C, @delta(flip(1,2), C)) :- group1(C).
 some1 :- res1(C,1).
-res2(C, @delta(flip, (1,2), (C))) :- group2(C), not some1.
+res2(C, @delta(flip(1,2), C)) :- group2(C), not some1.
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -66,8 +66,8 @@ def test_flip_conditional_with_projection():
 group1(a).
 group1(b).
 group2(c).
-res1(C, @delta(flip, (1,2), (C))) :- group1(C).
-res2(C, @delta(flip, (1,2), (C))) :- group2(C), not res1(_,1).
+res1(C, @delta(flip(1,2), C)) :- group1(C).
+res2(C, @delta(flip(1,2), C)) :- group2(C), not res1(_,1).
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -80,8 +80,8 @@ def test_flip_conditional_with_conditional_literal():
 group1(a).
 group1(b).
 group2(c).
-res1(C, @delta(flip, (1,2), (C))) :- group1(C).
-res2(C, @delta(flip, (1,2), (C))) :- group2(C); res1(C',0) : group1(C').
+res1(C, @delta(flip(1,2), C)) :- group1(C).
+res2(C, @delta(flip(1,2), C)) :- group2(C); res1(C',0) : group1(C').
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -94,8 +94,8 @@ def test_flip_conditional_with_aggregates():
 group1(a).
 group1(b).
 group2(c).
-res1(C, @delta(flip, (1,2), (C))) :- group1(C).
-res2(C, @delta(flip, (1,2), (C))) :- group2(C), #count{C' : res1(C',0)} = 0.
+res1(C, @delta(flip(1,2), C)) :- group1(C).
+res2(C, @delta(flip(1,2), C)) :- group2(C), #count{C' : res1(C',0)} = 0.
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -105,7 +105,7 @@ res2(C, @delta(flip, (1,2), (C))) :- group2(C), #count{C' : res1(C',0)} = 0.
 
 def test_flip_bias():
     program = Program("""
-result(C, @delta(flip, (1,10), (C,))) :- C = 1..1000.
+result(C, @delta(flip(1,10), C)) :- C = 1..1000.
 
 #show.
 #show (F,S) : F = 0..1, S = #count{C : result(C,F)}.
@@ -121,29 +121,29 @@ result(C, @delta(flip, (1,10), (C,))) :- C = 1..1000.
 
 def test_repeat_flip_coin():
     program = Program("""
-#show X : X = @delta(flip, (9,10), ()).    
+#show X : X = @delta(flip(9,10)).    
     """)
     res = Repeat.on(program, 1000)
-    for key in res.counters:
+    for key in res._counters:
         assert len(program.sms(delta_terms=key).models) == 1
         assert len(program.sms(delta_terms=key).models[0]) == 1
         face = program.sms(delta_terms=key).models[0][0]
         if face == 1:
-            assert res.counters[key] / 1000 == pytest.approx(9 / 10, rel=2)
+            assert res._counters[key] / 1000 == pytest.approx(9 / 10, rel=2)
 
 
 def test_program_with_multiple_stable_models():
     program = Program("""
 {a; b; c} = 1.
 
-f(a, @delta(flip, (1,2), (a))) :- a.
-f(b, @delta(flip, (1,2), (b))) :- b.
-f(c, @delta(flip, (1,2), (c))) :- c.
+f(a, @delta(flip(1,2), a)) :- a.
+f(b, @delta(flip(1,2), b)) :- b.
+f(c, @delta(flip(1,2), c)) :- c.
 
 :- a, f(a, 0).
 :- b, f(b, 0).
 :- c, f(c, 0).
-f(a, @delta(flip, (1,2), (a))) :- c, f(c, 1).
+f(a, @delta(flip(1,2), a)) :- c, f(c, 1).
 :- c, f(a, 1).
 
 :- f(a, 1), f(b, 0).    
@@ -160,7 +160,7 @@ f(a, @delta(flip, (1,2), (a))) :- c, f(c, 1).
 
 def test_program_with_randint():
     program = Program("""
-res(@delta(randint, (1, 10), ())).
+res(@delta(randint(1, 10))).
         """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -170,7 +170,7 @@ res(@delta(randint, (1, 10), ())).
 
 def test_program_with_binom():
     program = Program("""
-res(@delta(binom, (5, 4,10), ())).    
+res(@delta(binom(5, 4,10))).    
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -180,7 +180,7 @@ res(@delta(binom, (5, 4,10), ())).
 
 def test_program_with_poisson():
     program = Program("""
-res(@delta(poisson, (6,10), ())).    
+res(@delta(poisson(6,10))).    
     """)
     res = Repeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
@@ -202,7 +202,7 @@ edge(c,d).
 node(X) :- edge(X,_).
 node(Y) :- edge(_,Y).
 
-removed(X,Y,@delta(flip, (5,100), (X,Y))) :- edge(X,Y).
+removed(X,Y,@delta(flip(5,100), X,Y)) :- edge(X,Y).
 
 %{assign(X,C) : color(C)} = 1 :- node(X).
 assign(X,red) :- node(X), not assign(X,green), not assign(X,blue). 
@@ -248,7 +248,7 @@ to(d).
 node(X) :- neighbors(X,_).
 
 reach(X) :- from(X).
-next(X,@delta(randint, (1,N), (X))) :- reach(X), not to(X), neighbors(X,N).
+next(X,@delta(randint(1,N), X)) :- reach(X), not to(X), neighbors(X,N).
 reach(Y) :- reach(X), next(X,I), neighbor(X,I,Y).
 
 :- node(X), not reach(X).
@@ -275,7 +275,7 @@ node(Y) :- edge(_,Y).
 
 infected(a).
 
-infected(Y,@delta(flip, (5,100), (X,Y))) :- infected(X), edge(X,Y).
+infected(Y,@delta(flip(5,100), X,Y)) :- infected(X), edge(X,Y).
 infected(X) :- infected(X,1).
 
 healthy(X) :- node(X), not infected(X).
@@ -296,7 +296,7 @@ reach(Y) :- reach(X), edge(X,Y), healthy(Y).
 
 def test_flip_coin_then_derive_a_or_b():
     program = Program("""
-coin(@delta(flip, (1,2), ())).
+coin(@delta(flip(1,2))).
 a :- coin(0).
 b :- coin(1).    
     """)
@@ -312,7 +312,7 @@ b :- coin(1).
 
 def test_flip_coin_then_kill_or_derive_a_and_b():
     program = Program("""
-coin(@delta(flip, (1,2), ())).
+coin(@delta(flip(1,2))).
 :- coin(0).
 a :- coin(1), not b.
 b :- coin(1), not a. 
@@ -338,7 +338,7 @@ router(X) :- connection(X,_).
 
 infected(a,1).
 
-infected(Y,@delta(flip, (10,100), (X,Y))) :- infected(X,1), connection(X,Y).
+infected(Y,@delta(flip(10,100), X,Y)) :- infected(X,1), connection(X,Y).
 
 healthy(X) :- router(X), not infected(X,1).
 
@@ -352,12 +352,12 @@ healthy(X) :- router(X), not infected(X,1).
     freq.print()
 
 
-def test_program_with_small_delta():
+def test_program_with_mass_delta():
     program = Program("""
-res(@delta(small, (1,1,2), ())).
+res(@delta((1,1,2))).
 :- res(2).
     """, max_stable_models=1)
-    res = SmallRepeat.on(program, 1000)
+    res = SmartRepeat.on(program, 1000)
     freq = res.sets_of_stable_models_frequency()
     freq.print()
     freq = res.no_stable_model_frequency()
