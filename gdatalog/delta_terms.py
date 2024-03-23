@@ -53,7 +53,7 @@ class DeltaTermCall:
     signature: tuple[clingo.Symbol, ...]
     result: Any
     probability: Probability
-    all_done: Optional[bool] = dataclasses.field(default=None, compare=False, hash=False)
+    all_done: bool = dataclasses.field(default=False, compare=False, hash=False)
 
     def __str__(self):
         params = ','.join([str(p) for p in self.params])
@@ -83,7 +83,7 @@ class DeltaTermsContext:
         signature = clingo.Function(name='', arguments=signature)
         if function.name:
             result, probability = self.__delta_terms[function.name](*function.arguments)
-            all_done = None
+            all_done = False
         else:
             result, probability, all_done = mass(
                 *function.arguments,

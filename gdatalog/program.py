@@ -180,18 +180,15 @@ class SmartRepeat(Repeat):
         validate('times', times, min_value=1)
         for index in range(times):
             res = self.program.sms(calls_prefixes=self.__calls_prefixes)
+            validate("unnamed delta terms only", all(delta_term.function == "" for delta_term in res.delta_terms),
+                     equals=True, help_msg="Smart enumeration is incompatible with named delta terms")
             self._counters[res.delta_terms] += 1
             self._number_of_calls[0] += 1
             assert self._counters[res.delta_terms] == 1  # we cannot encounter the same ground program twice
-            if res.delta_terms and not res.delta_terms[-1].function:
+            if res.delta_terms:
                 last = len(res.delta_terms)
-                while last > 0:
-                    validate("unnamed delta terms only", res.delta_terms[last - 1].all_done,
-                             help_msg="Smart enumeration is incompatible with named delta terms")
-                    if res.delta_terms[last - 1].all_done:
-                        last -= 1
-                    else:
-                        break
+                while last > 0 and res.delta_terms[last - 1].all_done:
+                    last -= 1
                 if last == 0:
                     return True
                 key = res.delta_terms[:last - 1]
