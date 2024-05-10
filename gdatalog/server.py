@@ -23,7 +23,7 @@ def endpoint(router, path):
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000"],
+    allow_origins=[],
     allow_credentials=False,
     allow_methods=["POST"],
     allow_headers=["*"],

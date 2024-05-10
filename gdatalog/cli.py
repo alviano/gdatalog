@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 import typer
+import uvicorn
 from dumbo_utils.console import console
 from dumbo_utils.validation import validate
 from rich.live import Live
@@ -42,7 +43,7 @@ def run_app():
 @app.callback()
 def main(
         filenames: List[Path] = typer.Option(
-            ...,
+            [],
             "--filename",
             "-f",
             help="One or more files to parse",
@@ -165,3 +166,16 @@ def command_repeat(
             else:
                 to_be_done -= n
             live.update(stats_table(res))
+
+
+@app.command(name="server")
+def command_server(
+        port: int = typer.Option(8000, "--port", "-p",
+                                 help="An available port to listen for incoming requests"),
+        reload: bool = typer.Option(False, "--reload",
+                                    help="Reload server if source code changes (for development)")
+) -> None:
+    """
+    Run a server for GDatalog (program and other options are provided by JSON requests).
+    """
+    uvicorn.run("gdatalog.server:app", port=port, reload=reload)
