@@ -4,12 +4,15 @@ from bisect import bisect_right
 from collections import OrderedDict
 from fractions import Fraction
 from functools import lru_cache
-from typing import List, Any, Tuple, Iterable, Optional
-from dumbo_utils.validation import validate
+from typing import Any, Tuple, Iterable, Optional
 
 import clingo
+import requests
+from dumbo_utils.validation import validate
 from scipy import stats
 from typeguard import typechecked
+
+WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
 
 
 @typechecked
@@ -23,7 +26,7 @@ class Probability:
         validate('d', d, min_value=1)
 
     @staticmethod
-    def of(n, d):
+    def of(n, d: int = 1):
         return Probability(Fraction(n, d))
 
     def __post_init__(self):
@@ -193,7 +196,53 @@ def mass_with_smart_enumeration(
     return outcome, Probability.of(bias, sum_of_all_bias), len(allowed_list) == 1
 
 
+@lru_cache()
+def __wikipedia_get_links_from_page(page_title):
+    params = {
+        "action": "query",
+        "titles": page_title,
+        "prop": "links",
+        "pllimit": "max",
+        "format": "json"
+    }
+
+    response = requests.get(WIKIPEDIA_API_URL, params=params)
+    data = response.json()
+
+    # Extract page information
+    pages = data.get("query", {}).get("pages", {})
+    page_id = next(iter(pages))  # Get the first page's ID
+    if page_id == "-1":
+        return []  # Page not found
+
+    links = pages[page_id].get("links", [])
+    link_titles = [link["title"] for link in links]
+    return link_titles
+
+
+@typechecked
+def wikipedia_neighbors(node: clingo.String) -> Tuple[clingo.Number, Probability]:
+    the_node = node.string
+    validate('the_node', the_node, min_len=1, max_len=1024)
+    res = len(__wikipedia_get_links_from_page(the_node))
+    prob = Probability.of(1)
+    return clingo.Number(res), prob
+
+
+@typechecked
+def wikipedia_neighbor(node: clingo.String, index: clingo.Number) -> Tuple[clingo.String, Probability]:
+    the_node, the_index = node.string, index.number
+    validate('the_node', the_node, min_len=1, max_len=1024)
+    neighbors = __wikipedia_get_links_from_page(the_node)
+    validate('the_index', the_index, min_value=1, max_value=len(neighbors))
+    res = neighbors[the_index - 1]
+    prob = Probability.of(1)
+    return clingo.String(res), prob
+
+
 DeltaTermsContext.register('flip', flip)
 DeltaTermsContext.register('randint', randint)
 DeltaTermsContext.register('binom', binom)
 DeltaTermsContext.register('poisson', poisson)
+DeltaTermsContext.register('wikipedia_neighbors', wikipedia_neighbors)
+DeltaTermsContext.register('wikipedia_neighbor', wikipedia_neighbor)

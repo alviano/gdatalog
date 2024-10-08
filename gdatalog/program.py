@@ -195,7 +195,6 @@ class SmartRepeat(Repeat):
                 if key not in self.__calls_prefixes:
                     self.__calls_prefixes[key] = set()
                 self.__calls_prefixes[key].add(res.delta_terms[last - 1].result)
-        self._number_of_calls[0] += times
         return True
 
     def _probability_of(self, delta_terms):
