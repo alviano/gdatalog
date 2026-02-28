@@ -42,6 +42,7 @@ def test_binom():
         0.34559999999999974,
         0.23039999999999994,
         0.0768,
+        0.01024,
     ]
     for _ in range(10):
         res = binom(clingo.Number(5), clingo.Number(4), clingo.Number(10))

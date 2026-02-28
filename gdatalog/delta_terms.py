@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Any, Tuple, Iterable, Optional
 
 import clingo
+import clingo.symbol
 import requests
 from dumbo_utils.validation import validate
 from scipy import stats
@@ -106,7 +107,7 @@ class DeltaTermsContext:
 
 
 @typechecked
-def flip(bias_n: clingo.Number, bias_d: clingo.Number) -> Tuple[clingo.Number, Probability]:
+def flip(bias_n: clingo.Symbol, bias_d: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
     n, d = bias_n.number, bias_d.number
     Probability.validate(n, d)
     probability_of_1 = Probability.of(n, d)
@@ -116,18 +117,18 @@ def flip(bias_n: clingo.Number, bias_d: clingo.Number) -> Tuple[clingo.Number, P
 
 
 @typechecked
-def randint(a: clingo.Number, b: clingo.Number) -> Tuple[clingo.Number, Probability]:
-    a, b = a.number, b.number
-    validate('a', a)
-    validate('b', b, min_value=a)
-    res = random.randint(a, b)
-    prob = Probability.of(1, b - a + 1)
+def randint(a: clingo.Symbol, b: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
+    _a, _b = a.number, b.number
+    validate('a', _a)
+    validate('b', _b, min_value=_a)
+    res = random.randint(_a, _b)
+    prob = Probability.of(1, _b - _a + 1)
     return clingo.Number(res), prob
 
 
 @typechecked
-def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: clingo.Number) -> \
-        Tuple[clingo.Number, Probability]:
+def binom(n_classes: clingo.Symbol, p_numerator: clingo.Symbol, p_denominator: clingo.Symbol) -> \
+        Tuple[clingo.Symbol, Probability]:
     n, p_n, p_d = n_classes.number, p_numerator.number, p_denominator.number
     validate('n_classes', n, min_value=1)
     Probability.validate(p_n, p_d)
@@ -137,7 +138,7 @@ def binom(n_classes: clingo.Number, p_numerator: clingo.Number, p_denominator: c
 
 
 @typechecked
-def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Number, Probability]:
+def poisson(lambda_n: clingo.Symbol, lambda_d: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
     n, d = lambda_n.number, lambda_d.number
     validate('lambda_n', n, min_value=1)
     validate('lambda_d', d, min_value=1)
@@ -147,7 +148,7 @@ def poisson(lambda_n: clingo.Number, lambda_d: clingo.Number) -> Tuple[clingo.Nu
 
 
 @lru_cache(maxsize=None)
-def __validate_mass_with_smart_enumeration(*args: clingo.Number):
+def __validate_mass_with_smart_enumeration(*args: clingo.Symbol):
     validate("params", args, min_len=1, help_msg="Sample space cannot be empty")
     outcome_to_bias = OrderedDict()
     for index, arg in enumerate(args):
@@ -177,9 +178,9 @@ def __validate_mass_with_smart_enumeration(*args: clingo.Number):
 
 @typechecked
 def mass_with_smart_enumeration(
-        *args: clingo.Number,
+        *args: clingo.Symbol,
         disallow_list: Iterable[clingo.Symbol] = ()
-) -> Tuple[clingo.Number, Probability, bool]:
+) -> Tuple[clingo.Symbol, Probability, bool]:
     outcome_to_bias, sum_of_all_bias = __validate_mass_with_smart_enumeration(*args)
     outcome_to_bias_items = tuple(outcome_to_bias.items())
     allowed_list = []
@@ -221,7 +222,7 @@ def __wikipedia_get_links_from_page(page_title):
 
 
 @typechecked
-def wikipedia_neighbors(node: clingo.String) -> Tuple[clingo.Number, Probability]:
+def wikipedia_neighbors(node: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
     the_node = node.string
     validate('the_node', the_node, min_len=1, max_len=1024)
     res = len(__wikipedia_get_links_from_page(the_node))
@@ -230,7 +231,7 @@ def wikipedia_neighbors(node: clingo.String) -> Tuple[clingo.Number, Probability
 
 
 @typechecked
-def wikipedia_neighbor(node: clingo.String, index: clingo.Number) -> Tuple[clingo.String, Probability]:
+def wikipedia_neighbor(node: clingo.Symbol, index: clingo.Symbol) -> Tuple[clingo.String, Probability]:
     the_node, the_index = node.string, index.number
     validate('the_node', the_node, min_len=1, max_len=1024)
     neighbors = __wikipedia_get_links_from_page(the_node)

@@ -54,7 +54,7 @@ def main(
             "-n",
             help="Maximum number of stable models to compute (0 for unbounded)"
         ),
-        debug: bool = typer.Option(False, "--debug", help="Don't minimize browser"),
+        debug: bool = typer.Option(False, "--debug", help="Print DEBUG information and stack traces on errors"),
 ):
     """
     Generative Datalog with negation under stable model semantics.

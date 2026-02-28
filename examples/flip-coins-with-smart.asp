@@ -1,6 +1,6 @@
 coin(1..3).
 
-heads(C, @delta((1,2), C)) :- coin(C).
+heads(C, @delta((2,1), C)) :- coin(C).
 
 #show.
 #show heads(C) : heads(C,1).

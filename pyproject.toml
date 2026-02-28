@@ -5,19 +5,22 @@ description = "Genereative Datalog with stable negation"
 authors = ["Mario Alviano <mario.alviano@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-typer = "^0.12.3"
-rich = "^13.7.1"
+python = "^3.13"
 typeguard = "^4.2.1"
 valid8 = "^5.1.2"
-distlib = "^0.3.8"
+distlib = "^0.4.0"
 scipy = "^1.13.0"
-dumbo-asp = "^0.3.8"
-fastapi = "^0.111.0"
+dumbo-asp = "^0.4.1"
+fastapi = "^0.134.0"
 requests = "^2.32.3"
+uvicorn = "^0.41.0"
+scipy-stubs = "~=1.17.1"
+
+[tool.poetry.scripts]
+gdatalog = "gdatalog.cli:run_app"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.2.0"
+pytest = "^9.0.2"
 coverage = "^7.5.1"
 
 [build-system]
