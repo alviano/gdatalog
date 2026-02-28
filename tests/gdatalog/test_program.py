@@ -362,3 +362,65 @@ res(@delta((1,1,2))).
     freq.print()
     freq = res.no_stable_model_frequency()
     assert Probability.of(4, 10) <= freq <= Probability.of(6, 10)
+
+
+def test_program_with_flip_mass_calculation():
+    program = Program("""
+res(@delta(
+    @mass(flip(1,10))
+)).
+:- res(1).
+    """, max_stable_models=1)
+    res = SmartRepeat.on(program, 1000)
+    freq = res.sets_of_stable_models_frequency()
+    freq.print()
+    freq = res.no_stable_model_frequency()
+    assert Probability.of(9, 100) <= freq <= Probability.of(11, 100)
+
+
+def test_program_with_randint_mass_calculation():
+    program = Program("""
+res(@delta(
+    @mass(randint(4,7))
+)).
+:- res(6).
+    """, max_stable_models=1)
+    res = SmartRepeat.on(program, 1000)
+    freq = res.sets_of_stable_models_frequency()
+    freq.print()
+    freq = res.no_stable_model_frequency()
+    assert Probability.of(23, 100) <= freq <= Probability.of(27, 100)
+
+
+def test_program_with_binom_mass():
+    program = Program("""
+res(
+    @delta(
+        @mass(
+            binom(5, 4,10)
+        )
+    )
+).    
+    """)
+    res = SmartRepeat.on(program, 1000)
+    assert res.number_of_calls == 6
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 6
+    # freq.print()
+
+
+def test_program_with_poisson_mass():
+    program = Program("""
+res(
+    @delta(
+        @mass(
+            poisson(6,10)
+        )
+    )
+).    
+    """)
+    res = SmartRepeat.on(program, 1000)
+    assert res.number_of_calls == 6
+    freq = res.sets_of_stable_models_frequency()
+    assert len(freq) == 6
+    # freq.print()

@@ -4,7 +4,8 @@ import pytest
 from dumbo_utils.validation import ValidationError
 
 from gdatalog import utils
-from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, mass_with_smart_enumeration
+from gdatalog.delta_terms import DeltaTermsContext, flip, binom, poisson, mass_with_smart_enumeration, flip_mass, \
+    randint_mass, binom_mass, poisson_mass
 
 
 def test_flip_bias_cannot_be_less_than_zero():
@@ -78,3 +79,55 @@ def test_mass_with_names_as_functions():
     res = mass_with_smart_enumeration(clingo.Function("heads", [clingo.Number(1)]),
                                       clingo.Function("tails", [clingo.Number(1)]))
     assert str(res[0]) in ["heads", "tails"]
+
+
+def test_flip_mass():
+    res = flip_mass(clingo.Number(1), clingo.Number(10))
+    assert res[0].number == 9
+    assert res[1].number == 1
+
+
+def test_randint_mass():
+    res = randint_mass(clingo.Number(4), clingo.Number(7))
+    assert len(res) == 4
+    for i, x in enumerate(res):
+        assert x.name == ''
+        assert len(x.arguments) == 2
+        assert x.arguments[0].number == i + 4
+        assert x.arguments[1].number == 1
+
+
+def test_binom_mass():
+    expected = [
+        0.07775999999999998,
+        0.2592000000000001,
+        0.34559999999999974,
+        0.23039999999999994,
+        0.0768,
+        0.01024,
+    ]
+    res = binom_mass(clingo.Number(5), clingo.Number(4), clingo.Number(10), clingo.Number(10**9))
+    assert len(res) == len(expected)
+    for i, x in enumerate(res):
+        assert x.name == ''
+        assert len(x.arguments) == 2
+        assert x.arguments[0].number == i
+        assert pytest.approx(x.arguments[1].number / 10**9) == expected[i]
+
+
+def test_poisson_mass():
+    expected = [
+        0.5488116360940265,
+        0.3292869816564159,
+        0.09878609449692473,
+        0.019757218,
+        0.002963582,
+        0.000355629,
+    ]
+    res = poisson_mass(clingo.Number(6), clingo.Number(10), multiplier=clingo.Number(10**9), stop_at=None)
+    assert len(res) == len(expected)
+    for i, x in enumerate(res):
+        assert x.name == ''
+        assert len(x.arguments) == 2
+        assert x.arguments[0].number == i
+        assert pytest.approx(x.arguments[1].number / 10**9) == expected[i]

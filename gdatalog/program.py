@@ -176,6 +176,12 @@ class SmartRepeat(Repeat):
     __calls_prefixes: Dict[tuple[DeltaTermCall, ...], set[clingo.Symbol]] = dataclasses.field(
         default_factory=dict, init=False)
 
+    @staticmethod
+    def on(program: Program, times: Optional[int] = None, smart=True) -> 'SmartRepeat':
+        validate('smart', smart, equals=True, help_msg="SmartRepeat::on() must be called with smart=True")
+        return Repeat.on(program, times, smart)
+
+
     def repeat(self, times: int) -> bool:
         validate('times', times, min_value=1)
         for index in range(times):
@@ -185,16 +191,17 @@ class SmartRepeat(Repeat):
             self._counters[res.delta_terms] += 1
             self._number_of_calls[0] += 1
             assert self._counters[res.delta_terms] == 1  # we cannot encounter the same ground program twice
-            if res.delta_terms:
-                last = len(res.delta_terms)
-                while last > 0 and res.delta_terms[last - 1].smart_enumeration_exhausted:
-                    last -= 1
-                if last == 0:
-                    return True
-                key = res.delta_terms[:last - 1]
-                if key not in self.__calls_prefixes:
-                    self.__calls_prefixes[key] = set()
-                self.__calls_prefixes[key].add(res.delta_terms[last - 1].result)
+            if not res.delta_terms:
+                break
+            last = len(res.delta_terms)
+            while last > 0 and res.delta_terms[last - 1].smart_enumeration_exhausted:
+                last -= 1
+            if last == 0:
+                break
+            key = res.delta_terms[:last - 1]
+            if key not in self.__calls_prefixes:
+                self.__calls_prefixes[key] = set()
+            self.__calls_prefixes[key].add(res.delta_terms[last - 1].result)
         return True
 
     def _probability_of(self, delta_terms):

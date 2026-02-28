@@ -67,14 +67,17 @@ class DeltaTermCall:
 
 class DeltaTermsContext:
     __delta_terms = {}
+    __mass_terms = {}
 
     def __init__(self, calls_prefixes: Optional[dict[tuple[DeltaTermCall, ...], set[clingo.Symbol]]] = None):
         self.__calls = []
         self.calls_prefixes = calls_prefixes or {}  # shared object
 
     @classmethod
-    def register(cls, name, code):
+    def register(cls, name, code, mass = None):
         cls.__delta_terms[name] = code
+        if mass is not None:
+            cls.__mass_terms[name] = mass
 
     def as_restricted_clingo_context(self):
         return self.ClingoContext(self)
@@ -89,6 +92,8 @@ class DeltaTermsContext:
                  help_msg=f"The first argument of @delta must be a function")
         signature = clingo.Function(name='', arguments=signature)
         if function.name:
+            validate("delta function", function.name, is_in=self.__delta_terms,
+                     help_msg=f"Unknown delta function {function.name}")
             result, probability = self.__delta_terms[function.name](*function.arguments)
             smart_enumeration_exhausted = False
         else:
@@ -108,13 +113,32 @@ class DeltaTermsContext:
         )
         return result
 
+    @lru_cache(maxsize=None)
+    def mass(self, function):
+        validate("delta function", function.type, equals=clingo.SymbolType.Function,
+                 help_msg=f"The first argument of @mass must be a function")
+        validate("delta function", function.name, is_in=self.__delta_terms,
+                 help_msg=f"Unknown delta function {function.name}")
+
+        return clingo.Function("", self.__mass_terms[function.name](*function.arguments))
+
     @typechecked
     @dataclasses.dataclass(order=True, frozen=True)
     class ClingoContext:
         __master: "DeltaTermsContext"
 
+        def __call_master(self, at_term, *args):
+            try:
+                attr = getattr(self.__master, at_term)
+                return attr(*args)
+            except Exception as e:
+                raise RuntimeError(f"ClingoContext failure: {e}") from e
+
         def delta(self, function, *signature):
-            return self.__master.delta(function, *signature)
+            return self.__call_master("delta", function, *signature)
+
+        def mass(self, function):
+            return self.__call_master("mass", function)
 
 
 @typechecked
@@ -128,6 +152,13 @@ def flip(bias_n: clingo.Symbol, bias_d: clingo.Symbol) -> Tuple[clingo.Symbol, P
 
 
 @typechecked
+def flip_mass(bias_n: clingo.Symbol, bias_d: clingo.Symbol) -> list[clingo.Symbol]:
+    n, d = bias_n.number, bias_d.number
+    Probability.validate(n, d)
+    return [clingo.Number(d - n), clingo.Number(n)]
+
+
+@typechecked
 def randint(a: clingo.Symbol, b: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
     _a, _b = a.number, b.number
     validate('a', _a)
@@ -135,6 +166,17 @@ def randint(a: clingo.Symbol, b: clingo.Symbol) -> Tuple[clingo.Symbol, Probabil
     res = random.randint(_a, _b)
     prob = Probability.of(1, _b - _a + 1)
     return clingo.Number(res), prob
+
+
+@typechecked
+def randint_mass(a: clingo.Symbol, b: clingo.Symbol) -> list[clingo.Symbol]:
+    _a, _b = a.number, b.number
+    validate('a', _a)
+    validate('b', _b, min_value=_a)
+    return [
+        clingo.Function('', [clingo.Number(x), clingo.Number(1)])
+        for x in range(_a, _b+1)
+    ]
 
 
 @typechecked
@@ -149,6 +191,22 @@ def binom(n_classes: clingo.Symbol, p_numerator: clingo.Symbol, p_denominator: c
 
 
 @typechecked
+def binom_mass(n_classes: clingo.Symbol, p_numerator: clingo.Symbol, p_denominator: clingo.Symbol, multiplier: clingo.Symbol = clingo.Number(10**9)) -> list[clingo.Symbol]:
+    # We use a large multiplier to convert float probabilities from pmf to integer masses/biases
+    # Since n can be large, we want enough precision.
+
+    n, p_n, p_d, m = n_classes.number, p_numerator.number, p_denominator.number, multiplier.number
+    validate('n_classes', n, min_value=1)
+    validate('multiplier', m, min_value=100, help_msg="The multiplier must be large to have enough precision")
+    Probability.validate(p_n, p_d)
+
+    return [
+        clingo.Function('', [clingo.Number(x), clingo.Number(int(stats.binom.pmf(x, n, p_n / p_d) * m))])
+        for x in range(n + 1)
+    ]
+
+
+@typechecked
 def poisson(lambda_n: clingo.Symbol, lambda_d: clingo.Symbol) -> Tuple[clingo.Symbol, Probability]:
     n, d = lambda_n.number, lambda_d.number
     validate('lambda_n', n, min_value=1)
@@ -156,6 +214,33 @@ def poisson(lambda_n: clingo.Symbol, lambda_d: clingo.Symbol) -> Tuple[clingo.Sy
     res = stats.poisson.rvs(n / d)
     prob = Probability(Fraction.from_float(stats.poisson.pmf(res, n / d)))
     return clingo.Number(res), prob
+
+
+@typechecked
+def poisson_mass(lambda_n: clingo.Symbol, lambda_d: clingo.Symbol,
+                 multiplier: clingo.Symbol = clingo.Number(10**9), stop_at: Optional[clingo.Symbol] = None) -> list[clingo.Symbol]:
+    n, d, m, stop = lambda_n.number, lambda_d.number, multiplier.number, stop_at.number if stop_at is not None else None
+    validate('lambda_n', n, min_value=1)
+    validate('lambda_d', d, min_value=1)
+    validate('multiplier', m, min_value=100, help_msg="The multiplier must be large to have enough precision")
+
+    if stop is None:
+        stop = m * 9999 // 10000  # We want to cover at least 99.99% of the probability mass, but we also want to avoid too large lists. This is a heuristic that works well in practice.
+    validate('stop_at', stop, min_value=1, max_value=m - 1, help_msg="There must be a stop!")
+
+    x, cumulate = 0, 0
+    res = []
+    while True:
+        prob = stats.poisson.pmf(x, n / d) * m
+        cumulate += prob
+        res.append(
+            clingo.Function('', [clingo.Number(x), clingo.Number(int(stats.poisson.pmf(x, n / d) * m))])
+        )
+        if cumulate >= stop:
+            break
+        x += 1
+    return res
+
 
 
 @lru_cache(maxsize=None)
@@ -252,9 +337,9 @@ def wikipedia_neighbor(node: clingo.Symbol, index: clingo.Symbol) -> Tuple[cling
     return clingo.String(res), prob
 
 
-DeltaTermsContext.register('flip', flip)
-DeltaTermsContext.register('randint', randint)
-DeltaTermsContext.register('binom', binom)
-DeltaTermsContext.register('poisson', poisson)
+DeltaTermsContext.register('flip', flip, flip_mass)
+DeltaTermsContext.register('randint', randint, randint_mass)
+DeltaTermsContext.register('binom', binom, binom_mass)
+DeltaTermsContext.register('poisson', poisson, poisson_mass)
 DeltaTermsContext.register('wikipedia_neighbors', wikipedia_neighbors)
 DeltaTermsContext.register('wikipedia_neighbor', wikipedia_neighbor)
