@@ -83,19 +83,19 @@ The syntax is:
 
 **Built-in Delta Functions:**
 
-- `flip(n, d)`: Bernoulli distribution with probability n/d for success
-- `mass(options...)`: Categorical distribution over multiple outcomes
-- TODO: more delta terms from delta_terms.py:
-            DeltaTermsContext.register('flip', flip)
-            DeltaTermsContext.register('randint', randint)
-            DeltaTermsContext.register('binom', binom)
-            DeltaTermsContext.register('poisson', poisson)
-            DeltaTermsContext.register('wikipedia_neighbors', wikipedia_neighbors)
-            DeltaTermsContext.register('wikipedia_neighbor', wikipedia_neighbor)
-  END TODO
+- `flip(n, d)`: Bernoulli distribution with probability `n/d` for success.
+- `mass(options...)`: Categorical distribution over multiple outcomes.
+- `randint(a, b)`: Uniform discrete distribution between `a` and `b` (inclusive).
+- `binom(n, p_num, p_den)`: Binomial distribution with `n` trials and probability `p_num/p_den`.
+- `poisson(lambda_num, lambda_den)`: Poisson distribution with rate `lambda_num/lambda_den`.
+- `wikipedia_neighbors(page)`: Number of outgoing links from a Wikipedia page.
+- `wikipedia_neighbor(page, index)`: Title of the i-th outgoing link from a Wikipedia page.
 
-TODO: let's rephrase the next item to a paragraph
-- Extensible: Register custom delta functions for domain-specific distributions
+**Extensibility**
+
+GDatalog is designed to be extensible.
+You can easily register custom delta functions to support domain-specific distributions or integrate with external data sources.
+This is achieved by registering Python functions that return a value and its associated probability.
 
 
 ### Example: Probabilistic Graph Coloring
