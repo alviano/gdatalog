@@ -34,7 +34,8 @@ class Probability:
         self.validate(self.value.numerator, self.value.denominator)
 
     def __str__(self):
-        return f'{self.value} (~{float(self)})'
+        # return f'{self.value} (~{float(self)})'
+        return f'~{float(self):.16f}'
 
     def __float__(self):
         return float(self.value)
@@ -42,8 +43,14 @@ class Probability:
     def __add__(self, other):
         return Probability(self.value + other.value)
 
+    def __sub__(self, other):
+        return Probability(self.value - other.value)
+
     def __mul__(self, other):
         return Probability(self.value * other.value)
+
+    def __truediv__(self, other):
+        return Probability(self.value / other.value)
 
     def complement(self):
         return Probability(Fraction(1) - self.value)
@@ -200,10 +207,14 @@ def binom_mass(n_classes: clingo.Symbol, p_numerator: clingo.Symbol, p_denominat
     validate('multiplier', m, min_value=100, help_msg="The multiplier must be large to have enough precision")
     Probability.validate(p_n, p_d)
 
-    return [
-        clingo.Function('', [clingo.Number(x), clingo.Number(int(stats.binom.pmf(x, n, p_n / p_d) * m))])
-        for x in range(n + 1)
-    ]
+    res = []
+    for x in range(n + 1):
+        mass = int(stats.binom.pmf(x, n, p_n / p_d) * m)
+        if mass > 0:
+            res.append(
+                clingo.Function('', [clingo.Number(x), clingo.Number(mass)])
+            )
+    return res
 
 
 @typechecked
@@ -233,9 +244,11 @@ def poisson_mass(lambda_n: clingo.Symbol, lambda_d: clingo.Symbol,
     while True:
         prob = stats.poisson.pmf(x, n / d) * m
         cumulate += prob
-        res.append(
-            clingo.Function('', [clingo.Number(x), clingo.Number(int(stats.poisson.pmf(x, n / d) * m))])
-        )
+        prob = int(prob)
+        if prob > 0:
+            res.append(
+                clingo.Function('', [clingo.Number(x), clingo.Number(int(prob))])
+            )
         if cumulate >= stop:
             break
         x += 1

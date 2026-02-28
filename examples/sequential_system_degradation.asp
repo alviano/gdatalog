@@ -9,7 +9,7 @@ Mission requirement: system must not fail before step 50.
 health(0, 100).
 
 % The Health attrition is sampled at each step T.
-attrition(T, @delta(randint(0, 5), T)) :- health(T, H), H > 0, T < 100.
+attrition(T, @delta(@mass(randint(0, 5)), T)) :- health(T, H), H > 0, T < 100.
 
 % The next health level depends on the previous level and the random attrition.
 health(T+1, H - A) :- health(T, H), attrition(T, A), H > A.
@@ -23,6 +23,6 @@ failed(T) :- health(T, 0).
 :- failed(T), T < 50.
 
 #show.
-#show health/2.
+#show STEPS : health(STEPS, 0).
 #show failed/1.
 

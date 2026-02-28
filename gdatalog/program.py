@@ -37,6 +37,15 @@ class SetsOfStableModelsFrequency:
 
     def __post_init__(self):
         validate('same_keys', self.__frequency.keys(), equals=self.__models.keys())
+        # introduce the "UNEXPLORED" key for the case of smart enumeration
+        total = sum(self.__frequency.values(), Probability.of(0, 1))
+        if total < Probability.of(1, 1):
+            self.__frequency['UNEXPLORED'] = Probability.of(1, 1) - total
+            self.__models['UNEXPLORED'] = ModelList.unexplored()
+        # normalize frequencies
+        #total = sum(self.__frequency.values(), Probability.of(0, 1))
+        #for key in self.__frequency:
+        #    self.__frequency[key] /= total
 
     def __getitem__(self, item):
         return self.__frequency[item], self.__models[item]
@@ -61,9 +70,12 @@ class SetsOfStableModelsFrequency:
         print('*** Stats ***')
         for x in self.values():
             print(f'Probability: {x[0]}')
-            print(f'  Models: {len(x[1])}')
-            for i in range(len(x[1])):
-                print(f'  Model: {x[1][i]}')
+            if x[1].is_unexplored():
+                print('  Models: UNEXPLORED')
+            else:
+                print(f'  Models: {len(x[1])}')
+                for i in range(len(x[1])):
+                    print(f'  Model: {x[1][i]}')
 
 
 @typeguard.typechecked
@@ -192,17 +204,17 @@ class SmartRepeat(Repeat):
             self._number_of_calls[0] += 1
             assert self._counters[res.delta_terms] == 1  # we cannot encounter the same ground program twice
             if not res.delta_terms:
-                break
+                return True
             last = len(res.delta_terms)
             while last > 0 and res.delta_terms[last - 1].smart_enumeration_exhausted:
                 last -= 1
             if last == 0:
-                break
+                return True
             key = res.delta_terms[:last - 1]
             if key not in self.__calls_prefixes:
                 self.__calls_prefixes[key] = set()
             self.__calls_prefixes[key].add(res.delta_terms[last - 1].result)
-        return True
+        return False
 
     def _probability_of(self, delta_terms):
         return reduce(lambda p, d: p * d.probability, delta_terms, Probability.of(1, 1))

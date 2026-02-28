@@ -124,7 +124,7 @@ def command_repeat(
         table.add_column("Model")
         for (probability, models) in sorted(freq.values(), key=lambda x: x[0], reverse=True):
             if len(models) == 0:
-                table.add_row(f"{probability}", "0")
+                table.add_row(f"{probability}", "?" if models.is_unexplored() else "0")
                 table.add_row()
                 continue
             for model_index, model in enumerate(models, start=1):

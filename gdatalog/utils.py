@@ -1,8 +1,10 @@
 import dataclasses
+from dataclasses import InitVar
 from typing import List, Iterable
 
 import typeguard
 from dumbo_asp.primitives.models import Model
+from valid8 import validate
 
 
 def on_model_print(m):
@@ -13,16 +15,26 @@ def on_model_print(m):
 @dataclasses.dataclass(order=True, unsafe_hash=True, frozen=True)
 class ModelList:
     __value: List[Model]
+    __unexplored: bool = dataclasses.field(default=False)
+
+    key: InitVar[object] = dataclasses.field(default=...)
+    __key = object
 
     @staticmethod
     def of(models: Iterable[Model]):
-        return ModelList(list(models))
+        return ModelList(list(models), key=ModelList.__key)
 
     @staticmethod
     def empty():
-        return ModelList([])
+        return ModelList([], key=ModelList.__key)
 
-    def __post_init__(self):
+    @staticmethod
+    def unexplored():
+        return ModelList([], True, key=ModelList.__key)
+
+    def __post_init__(self, key):
+        validate("key", key, equals=self.__key, help_msg="ModelList must be created using the static factory methods")
+        validate("unexplored", self.__unexplored and len(self.__value) > 0, equals=False, help_msg="A ModelList cannot be both unexplored and non-empty")
         self.__value.sort()
 
     def __str__(self):
@@ -39,6 +51,9 @@ class ModelList:
 
     def is_emtpy(self):
         return len(self.__value) == 0
+
+    def is_unexplored(self):
+        return self.__unexplored
 
 
 @typeguard.typechecked
