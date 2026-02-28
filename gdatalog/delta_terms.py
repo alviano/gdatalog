@@ -76,6 +76,9 @@ class DeltaTermsContext:
     def register(cls, name, code):
         cls.__delta_terms[name] = code
 
+    def as_restricted_clingo_context(self):
+        return self.ClingoContext(self)
+
     @property
     def calls(self) -> tuple[DeltaTermCall, ...]:
         return tuple(self.__calls)
@@ -104,6 +107,14 @@ class DeltaTermsContext:
             )
         )
         return result
+
+    @typechecked
+    @dataclasses.dataclass(order=True, frozen=True)
+    class ClingoContext:
+        __master: "DeltaTermsContext"
+
+        def delta(self, function, *signature):
+            return self.__master.delta(function, *signature)
 
 
 @typechecked

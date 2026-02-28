@@ -84,7 +84,7 @@ class Program:
         control = clingo.Control()
         control.configuration.solve.models = self.max_stable_models
         control.add("base", [], self.code)
-        control.ground([("base", [])], context=context)
+        control.ground([("base", [])], context=context.as_restricted_clingo_context())
 
         delta_terms = context.calls
         if delta_terms not in self.__delta_terms_to_sms_result:
